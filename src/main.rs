@@ -12,8 +12,6 @@ fn main() -> anyhow::Result<()> {
     match args.command {
         cli::Command::Commit(template) => {
             let args = template.args();
-            println!("{:?}", args);
-
             let template = format!("templates/commit/{}", template.file_name());
 
             let contents: String = fs::read_to_string(&template)
@@ -30,8 +28,6 @@ fn main() -> anyhow::Result<()> {
                 None => contents.replace("{message}", ""),
             };
 
-            println!("contents: {}", contents);
-
             let _ = Command::new("git")
                 .arg("commit")
                 .arg("-m")
@@ -40,7 +36,7 @@ fn main() -> anyhow::Result<()> {
                 .exec();
         }
         cli::Command::Pr(template) => {
-            let template = format!("templates/pr/{}", template.file_name());
+            let _ = format!("templates/pr/{}", template.file_name());
         }
     };
 
