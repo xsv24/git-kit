@@ -18,11 +18,15 @@ git-kit --help
 ## 🏎️💨 Getting Started
 
 ```bash
-git-kit commit bug --ticket_num T-123 --message "fix"
+git-kit checkout TICKET-123
 ```
-> This will create an editable commit with the following format.
+
+```bash
+git-kit commit bug -m "fix"
+```
+> This will create an editable commit with the following format and will insert branch name will be injected by default into the `bug` commit template.
 >
-> `[T-123] 🐛 fix`
+> `[TICKET-123] 🐛 fix`
 
 
 ## ⚙️ Settings 
