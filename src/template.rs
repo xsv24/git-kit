@@ -46,7 +46,7 @@ impl Template {
             .context("Failed to retrieve 'git-kit' config")?;
 
         let file_name = self.file_name();
-        let sub_dir = format!("/templates/commit/{}", file_name);
+        let sub_dir = format!("templates/commit/{}", file_name);
         let template = project_dir.config_dir().join(sub_dir);
 
         let contents: String = fs::read_to_string(&template)
