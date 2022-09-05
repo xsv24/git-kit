@@ -18,6 +18,7 @@ fn main() -> anyhow::Result<()> {
 
     let conn = Connection::open(project_dir.config_dir().join("db"))?;
 
+    // Could move into build script ?
     conn.execute(
         "CREATE TABLE IF NOT EXISTS branch (
             name TEXT NOT NULL PRIMARY KEY,
@@ -56,6 +57,10 @@ fn main() -> anyhow::Result<()> {
                 .exec();
         }
     };
+
+    conn.close().map_err(|_| {
+        anyhow::anyhow!("Failed to close 'git-kit' connection")
+    })?;
 
     Ok(())
 }
