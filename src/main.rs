@@ -8,7 +8,7 @@ use branch::Branch;
 use clap::Parser;
 use directories::ProjectDirs;
 use rusqlite::Connection;
-use std::{os::unix::process::CommandExt, process::Command};
+use std::process::Command;
 
 fn main() -> anyhow::Result<()> {
     let args = cli::Cli::parse();
@@ -35,12 +35,14 @@ fn main() -> anyhow::Result<()> {
             let template = template.read_file()?;
             let contents = args.commit_message(template, &conn)?;
 
+            dbg!(&contents);
+
             let _ = Command::new("git")
                 .arg("commit")
                 .arg("-m")
                 .arg(contents)
                 .arg("-e")
-                .exec();
+                .status()?;
         }
         cli::Command::Checkout { name, ticket } => {
             // We want to store the branch name against and ticket number
@@ -52,13 +54,12 @@ fn main() -> anyhow::Result<()> {
                 .arg("checkout")
                 .arg("-b")
                 .arg(name)
-                .exec();
+                .output()?;
         }
     };
 
-    conn.close().map_err(|_| {
-        anyhow::anyhow!("Failed to close 'git-kit' connection")
-    })?;
+    conn.close()
+        .map_err(|_| anyhow::anyhow!("Failed to close 'git-kit' connection"))?;
 
     Ok(())
 }
