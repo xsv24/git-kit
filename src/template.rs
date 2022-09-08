@@ -53,3 +53,49 @@ impl Template {
         Ok(contents)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use fake::{Faker, Fake};
+
+    use super::*;
+
+    fn fake_args() -> Arguments {
+        Arguments { ticket: Faker.fake(), message: Faker.fake() }
+    }
+
+    #[test]
+    fn template_args() {
+        let args = fake_args();
+        let templates = vec![
+            Template::Bug(args.clone()),
+            Template::Feature(args.clone()),
+            Template::Refactor(args.clone()),
+            Template::Break(args.clone()),
+            Template::Deps(args.clone()),
+            Template::Docs(args.clone()),
+            Template::Test(args.clone()),
+        ];
+
+        templates.iter().for_each(|template| {
+            assert_eq!(template.args(), &args);
+        });
+    }
+
+    #[test]
+    fn template_filename() {
+        let templates = vec![
+            (Template::Bug(fake_args()), "bug.md"),
+            (Template::Feature(fake_args()), "feature.md"),
+            (Template::Refactor(fake_args()), "refactor.md"),
+            (Template::Break(fake_args()), "break.md"),
+            (Template::Deps(fake_args()), "deps.md"),
+            (Template::Docs(fake_args()), "docs.md"),
+            (Template::Test(fake_args()), "test.md"),
+        ];
+
+        templates.iter().for_each(|(template, expected )| {
+            assert_eq!(template.file_name(), expected.to_string());
+        });
+    }
+}

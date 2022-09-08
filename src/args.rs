@@ -2,7 +2,7 @@ use crate::branch::{get_branch_name, Branch};
 use clap::Args;
 use rusqlite::Connection;
 
-#[derive(Debug, Args)]
+#[derive(Debug, Args, PartialEq, Eq, Clone)]
 pub struct Arguments {
     #[clap(short, long, value_parser)]
     pub ticket: Option<String>,
