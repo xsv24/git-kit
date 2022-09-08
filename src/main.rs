@@ -54,7 +54,7 @@ fn main() -> anyhow::Result<()> {
                 .arg("checkout")
                 .arg("-b")
                 .arg(name)
-                .output()?;
+                .status()?;
         }
     };
 
