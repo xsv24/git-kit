@@ -35,8 +35,6 @@ fn main() -> anyhow::Result<()> {
             let template = template.read_file()?;
             let contents = args.commit_message(template, &conn)?;
 
-            dbg!(&contents);
-
             let _ = Command::new("git")
                 .arg("commit")
                 .arg("-m")
