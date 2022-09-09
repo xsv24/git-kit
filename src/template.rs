@@ -56,12 +56,19 @@ impl Template {
 
 #[cfg(test)]
 mod tests {
-    use fake::{Faker, Fake};
+    use fake::{Fake, Faker};
+    use std::{
+        env,
+        path::{Path, PathBuf},
+    };
 
     use super::*;
 
     fn fake_args() -> Arguments {
-        Arguments { ticket: Faker.fake(), message: Faker.fake() }
+        Arguments {
+            ticket: Faker.fake(),
+            message: Faker.fake(),
+        }
     }
 
     #[test]
@@ -94,8 +101,59 @@ mod tests {
             (Template::Test(fake_args()), "test.md"),
         ];
 
-        templates.iter().for_each(|(template, expected )| {
+        templates.iter().for_each(|(template, expected)| {
             assert_eq!(template.file_name(), expected.to_string());
         });
+    }
+
+    #[test]
+    fn read_file() -> anyhow::Result<()> {
+        let dirs = ProjectDirs::from("test", "xsv24", "git-kit")
+            .context("Failed to retrieve 'git-kit' config")?;
+
+        // https://doc.rust-lang.org/cargo/reference/environment-variables.html
+        let project_root = &env::var("CARGO_MANIFEST_DIR").unwrap();
+        let templates_path = &dirs.config_dir().join("templates/");
+
+        copy_or_replace(&Path::new(project_root).join("templates/"), templates_path)?;
+
+        let expected_templates = [
+            Template::Bug(fake_args()).read_file(&dirs)?.contains("🐛"),
+            Template::Feature(fake_args())
+                .read_file(&dirs)?
+                .contains("✨"),
+            Template::Refactor(fake_args())
+                .read_file(&dirs)?
+                .contains("🧹"),
+            Template::Break(fake_args()).read_file(&dirs)?.contains("⚠️"),
+            Template::Deps(fake_args()).read_file(&dirs)?.contains("📦"),
+            Template::Docs(fake_args()).read_file(&dirs)?.contains("📖"),
+            Template::Test(fake_args()).read_file(&dirs)?.contains("🧪"),
+        ];
+
+        assert!(expected_templates
+            .iter()
+            .all(|contains| contains.to_owned()));
+
+        fs::remove_dir_all(templates_path)?;
+
+        Ok(())
+    }
+
+    fn copy_or_replace(source_path: &PathBuf, target_path: &PathBuf) -> std::io::Result<()> {
+        match fs::read_dir(source_path) {
+            Ok(entry_iter) => {
+                fs::create_dir_all(target_path)?;
+                for dir in entry_iter {
+                    let entry = dir?;
+                    copy_or_replace(&entry.path(), &target_path.join(entry.file_name()))?;
+                }
+            }
+            Err(_) => {
+                fs::copy(&source_path, &target_path)?;
+            }
+        }
+
+        Ok(())
     }
 }
