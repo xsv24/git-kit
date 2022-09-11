@@ -1,4 +1,4 @@
-use crate::branch::{get_branch_name, Branch};
+use crate::{branch::Branch, git_commands::get_branch_name, try_convert::TryConvert};
 use clap::Args;
 use rusqlite::Connection;
 
@@ -15,7 +15,7 @@ impl Arguments {
     pub fn commit_message(&self, template: String, conn: &Connection) -> anyhow::Result<String> {
         let ticket_num = match &self.ticket {
             Some(num) => num.into(),
-            None => Branch::get(&get_branch_name()?, &conn)?.ticket,
+            None => Branch::get(&get_branch_name().try_convert()?, &conn)?.ticket,
         };
 
         let contents = template.replace("{ticket_num}", &format!("[{}]", ticket_num));

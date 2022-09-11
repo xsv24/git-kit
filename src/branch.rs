@@ -1,9 +1,10 @@
 use anyhow::Context;
 use chrono::{DateTime, Utc};
 use rusqlite::{types::Type, Connection, Row};
-use std::process::Command;
 
-#[derive(Debug)]
+use crate::git_commands::get_repo_name;
+
+#[derive(Debug, Clone)]
 pub struct Branch {
     pub name: String,
     pub ticket: String,
