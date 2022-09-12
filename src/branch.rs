@@ -38,8 +38,8 @@ impl Branch {
     }
 
     pub fn get(branch: &str, conn: &Connection) -> anyhow::Result<Branch> {
-        let name = format!("{}-{}", get_repo_name()?, branch);
-
+        let name = format!("{}-{}", get_repo_name()?, branch.trim());
+        
         let branch = conn.query_row(
             "SELECT name, ticket, data, created FROM branch where name = ?",
             [name],
