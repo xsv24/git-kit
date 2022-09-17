@@ -32,9 +32,12 @@ fn main() -> anyhow::Result<()> {
     // TODO: Add Context<> type to avoid passing in props everywhere.
 
     match args.command {
-        cli::Command::Commit(template) => template.commit(&conn, project_dir),
-        cli::Command::Checkout(checkout) => checkout.checkout(&conn),
-    }?;
+        cli::Command::Commit(template) => {
+            let contents = template.commit_msg(&conn, project_dir)?;
+            git_commands::commit(&contents).status()?;
+        }
+        cli::Command::Checkout(checkout) => checkout.checkout(&conn)?,
+    };
 
     conn.close()
         .map_err(|_| anyhow!("Failed to close 'git-kit' connection"))?;

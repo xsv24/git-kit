@@ -4,7 +4,7 @@ use directories::ProjectDirs;
 use rusqlite::Connection;
 use std::fs;
 
-use crate::{args::Arguments, git_commands};
+use crate::args::Arguments;
 
 #[derive(Debug, Subcommand)]
 pub enum Template {
@@ -61,24 +61,30 @@ impl Template {
         Ok(contents)
     }
 
-    pub fn commit(&self, conn: &Connection, project_dir: ProjectDirs) -> anyhow::Result<()> {
+    pub fn commit_msg(
+        &self,
+        conn: &Connection,
+        project_dir: ProjectDirs,
+    ) -> anyhow::Result<String> {
         let args = self.args();
         let template = self.read_file(&project_dir)?;
         let contents = args.commit_message(template, &conn)?;
 
-        let _ = git_commands::commit(&contents).status()?;
-
-        Ok(())
+        Ok(contents)
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use anyhow::anyhow;
     use fake::{Fake, Faker};
     use std::{
         env,
         path::{Path, PathBuf},
     };
+    use uuid::Uuid;
+
+    use crate::{branch::Branch, git_commands::get_branch_name, try_convert::TryConvert};
 
     use super::*;
 
@@ -126,14 +132,7 @@ mod tests {
 
     #[test]
     fn read_file() -> anyhow::Result<()> {
-        let dirs = ProjectDirs::from("test", "xsv24", "git-kit")
-            .context("Failed to retrieve 'git-kit' config")?;
-
-        // https://doc.rust-lang.org/cargo/reference/environment-variables.html
-        let project_root = &env::var("CARGO_MANIFEST_DIR").unwrap();
-        let templates_path = &dirs.config_dir().join("templates/");
-
-        copy_or_replace(&Path::new(project_root).join("templates/"), templates_path)?;
+        let (dirs, templates_path) = fake_project_dir()?;
 
         let expected_templates = [
             Template::Bug(fake_args()).read_file(&dirs)?.contains("🐛"),
@@ -158,6 +157,126 @@ mod tests {
         Ok(())
     }
 
+    #[test]
+    fn commit_msg_without_ticket_override_using_branch_name() -> anyhow::Result<()> {
+        let conn = Connection::open_in_memory()?;
+        let (dirs, templates_path) = fake_project_dir()?;
+
+        let args = Arguments {
+            message: Faker.fake(),
+            ticket: None,
+        };
+
+        let branch_name = get_branch_name().try_convert()?;
+        setup_db(&conn, Some(&fake_branch(Some(branch_name.clone()))?))?;
+
+        let expected_templates = [
+            (
+                "🐛",
+                Template::Bug(args.clone()).commit_msg(&conn, dirs.clone())?,
+            ),
+            (
+                "✨",
+                Template::Feature(args.clone()).commit_msg(&conn, dirs.clone())?,
+            ),
+            (
+                "🧹",
+                Template::Refactor(args.clone()).commit_msg(&conn, dirs.clone())?,
+            ),
+            (
+                "⚠️",
+                Template::Break(args.clone()).commit_msg(&conn, dirs.clone())?,
+            ),
+            (
+                "📦",
+                Template::Deps(args.clone()).commit_msg(&conn, dirs.clone())?,
+            ),
+            (
+                "📖",
+                Template::Docs(args.clone()).commit_msg(&conn, dirs.clone())?,
+            ),
+            (
+                "🧪",
+                Template::Test(args.clone()).commit_msg(&conn, dirs.clone())?,
+            ),
+        ];
+
+        for (template, msg) in expected_templates {
+            let expected = format!(
+                "[{}] {} {}",
+                branch_name,
+                template,
+                args.message.clone().unwrap_or("".into())
+            );
+            assert_eq!(msg, expected);
+        }
+
+        fs::remove_dir_all(templates_path)?;
+
+        conn.close()
+            .map_err(|_| anyhow!("Failed to close 'git-kit' connection"))?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn commit_msg_with_ticket_override() -> anyhow::Result<()> {
+        let conn = Connection::open_in_memory()?;
+        let (dirs, templates_path) = fake_project_dir()?;
+
+        let args = Arguments {
+            message: Faker.fake(),
+            ticket: Some(Faker.fake()),
+        };
+
+        let expected_templates = [
+            (
+                "🐛",
+                Template::Bug(args.clone()).commit_msg(&conn, dirs.clone())?,
+            ),
+            (
+                "✨",
+                Template::Feature(args.clone()).commit_msg(&conn, dirs.clone())?,
+            ),
+            (
+                "🧹",
+                Template::Refactor(args.clone()).commit_msg(&conn, dirs.clone())?,
+            ),
+            (
+                "⚠️",
+                Template::Break(args.clone()).commit_msg(&conn, dirs.clone())?,
+            ),
+            (
+                "📦",
+                Template::Deps(args.clone()).commit_msg(&conn, dirs.clone())?,
+            ),
+            (
+                "📖",
+                Template::Docs(args.clone()).commit_msg(&conn, dirs.clone())?,
+            ),
+            (
+                "🧪",
+                Template::Test(args.clone()).commit_msg(&conn, dirs.clone())?,
+            ),
+        ];
+
+        for (template, msg) in expected_templates {
+            let expected = format!(
+                "[{}] {} {}",
+                args.ticket.clone().unwrap_or("".into()),
+                template,
+                args.message.clone().unwrap_or("".into())
+            );
+            assert_eq!(msg, expected);
+        }
+
+        fs::remove_dir_all(templates_path)?;
+        conn.close()
+            .map_err(|_| anyhow!("Failed to close 'git-kit' connection"))?;
+
+        Ok(())
+    }
+
     fn copy_or_replace(source_path: &PathBuf, target_path: &PathBuf) -> std::io::Result<()> {
         match fs::read_dir(source_path) {
             Ok(entry_iter) => {
@@ -170,6 +289,50 @@ mod tests {
             Err(_) => {
                 fs::copy(&source_path, &target_path)?;
             }
+        }
+
+        Ok(())
+    }
+
+    fn fake_project_dir() -> anyhow::Result<(ProjectDirs, PathBuf)> {
+        let dirs = ProjectDirs::from(&format!("{}", Uuid::new_v4()), "xsv24", "git-kit")
+            .context("Failed to retrieve 'git-kit' config")?;
+
+        // https://doc.rust-lang.org/cargo/reference/environment-variables.html
+        let project_root = &env::var("CARGO_MANIFEST_DIR")?;
+        let templates_path = &dirs.config_dir().join("templates/");
+
+        copy_or_replace(&Path::new(project_root).join("templates/"), templates_path)?;
+
+        Ok((dirs, templates_path.to_owned()))
+    }
+
+    fn fake_branch(name: Option<String>) -> anyhow::Result<Branch> {
+        let name: String = name.unwrap_or(Faker.fake());
+        Ok(Branch::new(&name, None)?)
+    }
+
+    fn setup_db(conn: &Connection, branch: Option<&Branch>) -> anyhow::Result<()> {
+        conn.execute(
+            "CREATE TABLE branch (
+                name TEXT NOT NULL PRIMARY KEY,
+                ticket TEXT,
+                data BLOB,
+                created TEXT NOT NULL
+            )",
+            (),
+        )?;
+
+        if let Some(branch) = branch {
+            conn.execute(
+                "INSERT INTO branch (name, ticket, data, created) VALUES (?1, ?2, ?3, ?4)",
+                (
+                    &branch.name,
+                    &branch.ticket,
+                    &branch.data,
+                    branch.created.to_rfc3339(),
+                ),
+            )?;
         }
 
         Ok(())
