@@ -30,6 +30,18 @@ pub fn get_branch_name() -> Command {
     git_command(&["branch", "--show-current"])
 }
 
+pub fn commit(msg: &str) -> Command {
+    git_command(&["commit", "-m", msg, "-e"])
+}
+
+pub fn checkout(name: &str, create: bool) -> Command {
+    if create {
+        git_command(&["checkout", "-b", name])
+    } else {
+        git_command(&["checkout", name])
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

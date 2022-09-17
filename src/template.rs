@@ -1,9 +1,10 @@
 use anyhow::Context;
 use clap::Subcommand;
 use directories::ProjectDirs;
+use rusqlite::Connection;
 use std::fs;
 
-use crate::args::Arguments;
+use crate::{args::Arguments, git_commands};
 
 #[derive(Debug, Subcommand)]
 pub enum Template {
@@ -58,6 +59,16 @@ impl Template {
             .parse()?;
 
         Ok(contents)
+    }
+
+    pub fn commit(&self, conn: &Connection, project_dir: ProjectDirs) -> anyhow::Result<()> {
+        let args = self.args();
+        let template = self.read_file(&project_dir)?;
+        let contents = args.commit_message(template, &conn)?;
+
+        let _ = git_commands::commit(&contents).status()?;
+
+        Ok(())
     }
 }
 
