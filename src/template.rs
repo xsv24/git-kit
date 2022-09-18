@@ -1,10 +1,9 @@
-use anyhow::Context;
+use anyhow::Context as anyhow_context;
 use clap::Subcommand;
 use directories::ProjectDirs;
-use rusqlite::Connection;
 use std::fs;
 
-use crate::args::Arguments;
+use crate::{args::Arguments, context::Context, git_commands::GitCommands};
 
 #[derive(Debug, Subcommand)]
 pub enum Template {
@@ -61,14 +60,13 @@ impl Template {
         Ok(contents)
     }
 
-    pub fn commit_msg(
+    pub fn commit<C: GitCommands>(
         &self,
-        conn: &Connection,
-        project_dir: ProjectDirs,
+        context: &Context<C>
     ) -> anyhow::Result<String> {
         let args = self.args();
-        let template = self.read_file(&project_dir)?;
-        let contents = args.commit_message(template, &conn)?;
+        let template = self.read_file(&context.project_dir)?;
+        let contents = args.commit_message(template, &context)?;
 
         Ok(contents)
     }
@@ -76,15 +74,15 @@ impl Template {
 
 #[cfg(test)]
 mod tests {
-    use anyhow::anyhow;
     use fake::{Fake, Faker};
+    use rusqlite::Connection;
     use std::{
         env,
         path::{Path, PathBuf},
     };
     use uuid::Uuid;
 
-    use crate::{branch::Branch, git_commands::get_branch_name, try_convert::TryConvert};
+    use crate::{branch::Branch, git_commands::Git};
 
     use super::*;
 
@@ -159,45 +157,51 @@ mod tests {
 
     #[test]
     fn commit_msg_without_ticket_override_using_branch_name() -> anyhow::Result<()> {
-        let conn = Connection::open_in_memory()?;
         let (dirs, templates_path) = fake_project_dir()?;
+
+        let context = Context {
+            project_dir: dirs,
+            connection: Connection::open_in_memory()?,
+            commands: Git
+        };
 
         let args = Arguments {
             message: Faker.fake(),
             ticket: None,
         };
 
-        let branch_name = get_branch_name().try_convert()?;
-        setup_db(&conn, Some(&fake_branch(Some(branch_name.clone()))?))?;
+        let branch_name = context.commands.get_branch_name()?;
+        let repo_name = context.commands.get_repo_name()?;
+        setup_db(&context.connection, Some(&fake_branch(Some(branch_name.clone()), Some(repo_name))?))?;
 
         let expected_templates = [
             (
                 "🐛",
-                Template::Bug(args.clone()).commit_msg(&conn, dirs.clone())?,
+                Template::Bug(args.clone()).commit(&context)?,
             ),
             (
                 "✨",
-                Template::Feature(args.clone()).commit_msg(&conn, dirs.clone())?,
+                Template::Feature(args.clone()).commit(&context)?,
             ),
             (
                 "🧹",
-                Template::Refactor(args.clone()).commit_msg(&conn, dirs.clone())?,
+                Template::Refactor(args.clone()).commit(&context)?,
             ),
             (
                 "⚠️",
-                Template::Break(args.clone()).commit_msg(&conn, dirs.clone())?,
+                Template::Break(args.clone()).commit(&context)?,
             ),
             (
                 "📦",
-                Template::Deps(args.clone()).commit_msg(&conn, dirs.clone())?,
+                Template::Deps(args.clone()).commit(&context)?,
             ),
             (
                 "📖",
-                Template::Docs(args.clone()).commit_msg(&conn, dirs.clone())?,
+                Template::Docs(args.clone()).commit(&context)?,
             ),
             (
                 "🧪",
-                Template::Test(args.clone()).commit_msg(&conn, dirs.clone())?,
+                Template::Test(args.clone()).commit(&context)?,
             ),
         ];
 
@@ -212,17 +216,20 @@ mod tests {
         }
 
         fs::remove_dir_all(templates_path)?;
-
-        conn.close()
-            .map_err(|_| anyhow!("Failed to close 'git-kit' connection"))?;
+        context.close()?;
 
         Ok(())
     }
 
     #[test]
     fn commit_msg_with_ticket_override() -> anyhow::Result<()> {
-        let conn = Connection::open_in_memory()?;
         let (dirs, templates_path) = fake_project_dir()?;
+
+        let context = Context {
+            project_dir: dirs,
+            connection: Connection::open_in_memory()?,
+            commands: Git { }
+        };
 
         let args = Arguments {
             message: Faker.fake(),
@@ -232,31 +239,31 @@ mod tests {
         let expected_templates = [
             (
                 "🐛",
-                Template::Bug(args.clone()).commit_msg(&conn, dirs.clone())?,
+                Template::Bug(args.clone()).commit(&context)?,
             ),
             (
                 "✨",
-                Template::Feature(args.clone()).commit_msg(&conn, dirs.clone())?,
+                Template::Feature(args.clone()).commit(&context)?,
             ),
             (
                 "🧹",
-                Template::Refactor(args.clone()).commit_msg(&conn, dirs.clone())?,
+                Template::Refactor(args.clone()).commit(&context)?,
             ),
             (
                 "⚠️",
-                Template::Break(args.clone()).commit_msg(&conn, dirs.clone())?,
+                Template::Break(args.clone()).commit(&context)?,
             ),
             (
                 "📦",
-                Template::Deps(args.clone()).commit_msg(&conn, dirs.clone())?,
+                Template::Deps(args.clone()).commit(&context)?,
             ),
             (
                 "📖",
-                Template::Docs(args.clone()).commit_msg(&conn, dirs.clone())?,
+                Template::Docs(args.clone()).commit(&context)?,
             ),
             (
                 "🧪",
-                Template::Test(args.clone()).commit_msg(&conn, dirs.clone())?,
+                Template::Test(args.clone()).commit(&context)?,
             ),
         ];
 
@@ -271,8 +278,7 @@ mod tests {
         }
 
         fs::remove_dir_all(templates_path)?;
-        conn.close()
-            .map_err(|_| anyhow!("Failed to close 'git-kit' connection"))?;
+        context.close()?;
 
         Ok(())
     }
@@ -307,9 +313,11 @@ mod tests {
         Ok((dirs, templates_path.to_owned()))
     }
 
-    fn fake_branch(name: Option<String>) -> anyhow::Result<Branch> {
-        let name: String = name.unwrap_or(Faker.fake());
-        Ok(Branch::new(&name, None)?)
+    fn fake_branch(name: Option<String>, repo: Option<String>) -> anyhow::Result<Branch> {
+        let name =  name.unwrap_or(Faker.fake());
+        let repo = repo.unwrap_or(Faker.fake());
+
+        Ok(Branch::new(&name, &repo, None)?)
     }
 
     fn setup_db(conn: &Connection, branch: Option<&Branch>) -> anyhow::Result<()> {

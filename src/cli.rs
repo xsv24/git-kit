@@ -1,7 +1,6 @@
-use crate::{branch::Branch, git_commands, template::Template};
+use crate::{branch::Branch, git_commands::{GitCommands, CheckoutStatus}, template::Template, context::Context};
 use anyhow;
 use clap::{Args, Parser, Subcommand};
-use rusqlite::Connection;
 
 #[derive(Debug, Parser)]
 #[clap(name = "git-kit")]
@@ -33,18 +32,19 @@ pub struct Checkout {
 }
 
 impl Checkout {
-    pub fn checkout(&self, conn: &Connection) -> anyhow::Result<()> {
+    pub fn checkout<C: GitCommands>(&self, context: &Context<C>) -> anyhow::Result<()> {
         // We want to store the branch name against and ticket number
         // So whenever we commit we get the ticket number from the branch
-        let branch = Branch::new(&self.name, self.ticket.clone())?;
-        branch.insert_or_update(&conn)?;
+        let repo_name = context.commands.get_repo_name()?;
+        let branch = Branch::new(&self.name, &repo_name, self.ticket.clone())?;
+        branch.insert_or_update(&context.connection)?;
 
         // Attempt to create branch
-        let create = git_commands::checkout(&self.name, true).output()?;
+        let create = context.commands.checkout(&self.name, CheckoutStatus::New);
 
         // If the branch exists check it out
-        if !create.status.success() {
-            git_commands::checkout(&self.name, false).status()?;
+        if !create.is_err() {
+            context.commands.checkout(&self.name, CheckoutStatus::Existing)?;
         }
 
         Ok(())

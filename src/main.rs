@@ -4,22 +4,18 @@ pub mod cli;
 pub mod git_commands;
 pub mod template;
 pub mod try_convert;
+pub mod context;
 
-use anyhow::{anyhow, Context};
 use clap::Parser;
-use directories::ProjectDirs;
-use rusqlite::Connection;
+use context::Context;
+use git_commands::{Git, GitCommands};
 
 fn main() -> anyhow::Result<()> {
     let args = cli::Cli::parse();
-
-    let project_dir = ProjectDirs::from("dev", "xsv24", "git-kit")
-        .context("Failed to retrieve 'git-kit' config")?;
-
-    let conn = Connection::open(project_dir.config_dir().join("db"))?;
+    let context = Context::new(Git { })?;
 
     // Could move into build script ?
-    conn.execute(
+    context.connection.execute(
         "CREATE TABLE IF NOT EXISTS branch (
             name TEXT NOT NULL PRIMARY KEY,
             ticket TEXT,
@@ -29,18 +25,17 @@ fn main() -> anyhow::Result<()> {
         (),
     )?;
 
-    // TODO: Add Context<> type to avoid passing in props everywhere.
-
     match args.command {
         cli::Command::Commit(template) => {
-            let contents = template.commit_msg(&conn, project_dir)?;
-            git_commands::commit(&contents).status()?;
+            let contents = template.commit(&context)?;
+            context.commands.commit(&contents)?;
         }
-        cli::Command::Checkout(checkout) => checkout.checkout(&conn)?,
+        cli::Command::Checkout(checkout) => {
+            checkout.checkout(&context)?;
+        }
     };
 
-    conn.close()
-        .map_err(|_| anyhow!("Failed to close 'git-kit' connection"))?;
+    context.close()?;
 
     Ok(())
 }
