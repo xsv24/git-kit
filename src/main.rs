@@ -1,10 +1,10 @@
 pub mod args;
 pub mod branch;
 pub mod cli;
+pub mod context;
 pub mod git_commands;
 pub mod template;
 pub mod try_convert;
-pub mod context;
 
 use clap::Parser;
 use context::Context;
@@ -12,7 +12,7 @@ use git_commands::{Git, GitCommands};
 
 fn main() -> anyhow::Result<()> {
     let args = cli::Cli::parse();
-    let context = Context::new(Git { })?;
+    let context = Context::new(Git)?;
 
     // Could move into build script ?
     context.connection.execute(

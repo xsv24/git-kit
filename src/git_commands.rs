@@ -5,7 +5,7 @@ use crate::try_convert::TryConvert;
 
 pub enum CheckoutStatus {
     New,
-    Existing
+    Existing,
 }
 
 pub trait GitCommands {
@@ -70,8 +70,8 @@ mod tests {
 
     #[test]
     fn get_repo_name_returns_this_repo_name() -> anyhow::Result<()> {
-        let git = Git { };
-        
+        let git = Git;
+
         // TODO: Find a more testable approach to check stdout maybe?
         assert_eq!(git.get_repo_name()?, "git-kit");
 

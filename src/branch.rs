@@ -2,7 +2,7 @@ use anyhow::Context as anyhow_context;
 use chrono::{DateTime, Utc};
 use rusqlite::{types::Type, Connection, Row};
 
-use crate::{git_commands::GitCommands, context::Context};
+use crate::{context::Context, git_commands::GitCommands};
 
 #[derive(Debug, Clone)]
 pub struct Branch {
@@ -37,9 +37,13 @@ impl Branch {
         Ok(())
     }
 
-    pub fn get<C: GitCommands>(branch: &str, repo: &str, connext: &Context<C>) -> anyhow::Result<Branch> {
+    pub fn get<C: GitCommands>(
+        branch: &str,
+        repo: &str,
+        connext: &Context<C>,
+    ) -> anyhow::Result<Branch> {
         let name = format!("{}-{}", repo.trim(), branch.trim());
-        
+
         let branch = connext.connection.query_row(
             "SELECT name, ticket, data, created FROM branch where name = ?",
             [name],
@@ -88,8 +92,8 @@ mod tests {
     use directories::ProjectDirs;
     use fake::{Fake, Faker};
     use rusqlite::Connection;
-    use uuid::Uuid;
     use std::collections::HashMap;
+    use uuid::Uuid;
 
     #[test]
     fn creating_branch_with_ticket_populates_correctly() -> anyhow::Result<()> {
@@ -214,7 +218,7 @@ mod tests {
         // Arrange
         let context = Context {
             connection: setup_db()?,
-            project_dir: fake_project_dir()?, 
+            project_dir: fake_project_dir()?,
             commands: Git,
         };
 
@@ -249,7 +253,7 @@ mod tests {
             .with_context(|| "Expected to find a matching branch")?;
 
         // Act
-        let branch = Branch::get(&random_key, &repo,&context)?;
+        let branch = Branch::get(&random_key, &repo, &context)?;
 
         context.close()?;
         // Assert
@@ -269,7 +273,7 @@ mod tests {
         // Arrange
         let context = Context {
             connection: setup_db()?,
-            project_dir: fake_project_dir()?, 
+            project_dir: fake_project_dir()?,
             commands: Git,
         };
 
@@ -289,9 +293,8 @@ mod tests {
         )?;
 
         // Act
-        let actual = Branch::get(&format!(" {}\n", name), &repo,&context)?;
+        let actual = Branch::get(&format!(" {}\n", name), &repo, &context)?;
 
-        
         context.close()?;
         // Assert
         assert_eq!(actual.name, expected.name);

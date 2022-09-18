@@ -60,10 +60,7 @@ impl Template {
         Ok(contents)
     }
 
-    pub fn commit<C: GitCommands>(
-        &self,
-        context: &Context<C>
-    ) -> anyhow::Result<String> {
+    pub fn commit<C: GitCommands>(&self, context: &Context<C>) -> anyhow::Result<String> {
         let args = self.args();
         let template = self.read_file(&context.project_dir)?;
         let contents = args.commit_message(template, &context)?;
@@ -162,7 +159,7 @@ mod tests {
         let context = Context {
             project_dir: dirs,
             connection: Connection::open_in_memory()?,
-            commands: Git
+            commands: Git,
         };
 
         let args = Arguments {
@@ -172,37 +169,19 @@ mod tests {
 
         let branch_name = context.commands.get_branch_name()?;
         let repo_name = context.commands.get_repo_name()?;
-        setup_db(&context.connection, Some(&fake_branch(Some(branch_name.clone()), Some(repo_name))?))?;
+        setup_db(
+            &context.connection,
+            Some(&fake_branch(Some(branch_name.clone()), Some(repo_name))?),
+        )?;
 
         let expected_templates = [
-            (
-                "🐛",
-                Template::Bug(args.clone()).commit(&context)?,
-            ),
-            (
-                "✨",
-                Template::Feature(args.clone()).commit(&context)?,
-            ),
-            (
-                "🧹",
-                Template::Refactor(args.clone()).commit(&context)?,
-            ),
-            (
-                "⚠️",
-                Template::Break(args.clone()).commit(&context)?,
-            ),
-            (
-                "📦",
-                Template::Deps(args.clone()).commit(&context)?,
-            ),
-            (
-                "📖",
-                Template::Docs(args.clone()).commit(&context)?,
-            ),
-            (
-                "🧪",
-                Template::Test(args.clone()).commit(&context)?,
-            ),
+            ("🐛", Template::Bug(args.clone()).commit(&context)?),
+            ("✨", Template::Feature(args.clone()).commit(&context)?),
+            ("🧹", Template::Refactor(args.clone()).commit(&context)?),
+            ("⚠️", Template::Break(args.clone()).commit(&context)?),
+            ("📦", Template::Deps(args.clone()).commit(&context)?),
+            ("📖", Template::Docs(args.clone()).commit(&context)?),
+            ("🧪", Template::Test(args.clone()).commit(&context)?),
         ];
 
         for (template, msg) in expected_templates {
@@ -228,7 +207,7 @@ mod tests {
         let context = Context {
             project_dir: dirs,
             connection: Connection::open_in_memory()?,
-            commands: Git { }
+            commands: Git,
         };
 
         let args = Arguments {
@@ -237,34 +216,13 @@ mod tests {
         };
 
         let expected_templates = [
-            (
-                "🐛",
-                Template::Bug(args.clone()).commit(&context)?,
-            ),
-            (
-                "✨",
-                Template::Feature(args.clone()).commit(&context)?,
-            ),
-            (
-                "🧹",
-                Template::Refactor(args.clone()).commit(&context)?,
-            ),
-            (
-                "⚠️",
-                Template::Break(args.clone()).commit(&context)?,
-            ),
-            (
-                "📦",
-                Template::Deps(args.clone()).commit(&context)?,
-            ),
-            (
-                "📖",
-                Template::Docs(args.clone()).commit(&context)?,
-            ),
-            (
-                "🧪",
-                Template::Test(args.clone()).commit(&context)?,
-            ),
+            ("🐛", Template::Bug(args.clone()).commit(&context)?),
+            ("✨", Template::Feature(args.clone()).commit(&context)?),
+            ("🧹", Template::Refactor(args.clone()).commit(&context)?),
+            ("⚠️", Template::Break(args.clone()).commit(&context)?),
+            ("📦", Template::Deps(args.clone()).commit(&context)?),
+            ("📖", Template::Docs(args.clone()).commit(&context)?),
+            ("🧪", Template::Test(args.clone()).commit(&context)?),
         ];
 
         for (template, msg) in expected_templates {
@@ -314,7 +272,7 @@ mod tests {
     }
 
     fn fake_branch(name: Option<String>, repo: Option<String>) -> anyhow::Result<Branch> {
-        let name =  name.unwrap_or(Faker.fake());
+        let name = name.unwrap_or(Faker.fake());
         let repo = repo.unwrap_or(Faker.fake());
 
         Ok(Branch::new(&name, &repo, None)?)

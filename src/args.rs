@@ -1,4 +1,4 @@
-use crate::{branch::Branch, git_commands::{GitCommands}, context::Context};
+use crate::{branch::Branch, context::Context, git_commands::GitCommands};
 use clap::Args;
 
 #[derive(Debug, Args, PartialEq, Eq, Clone)]
@@ -13,18 +13,22 @@ pub struct Arguments {
 }
 
 impl Arguments {
-    pub fn commit_message<C: GitCommands>(&self, template: String, context: &Context<C>) -> anyhow::Result<String> {
+    pub fn commit_message<C: GitCommands>(
+        &self,
+        template: String,
+        context: &Context<C>,
+    ) -> anyhow::Result<String> {
         let ticket_num = match &self.ticket {
             Some(num) => num.into(),
-            None => { 
+            None => {
                 let branch = Branch::get(
                     &context.commands.get_branch_name()?,
                     &context.commands.get_repo_name()?,
-                    &context
+                    &context,
                 )?;
 
                 branch.ticket
-            },
+            }
         };
 
         let contents = template.replace("{ticket_num}", &format!("[{}]", ticket_num));
@@ -45,9 +49,44 @@ mod tests {
     use rusqlite::Connection;
     use uuid::Uuid;
 
-    use crate::git_commands::Git;
-
     use super::*;
+
+    #[derive(Clone)]
+    struct TestCommand {
+        repo: String,
+        branch_name: String,
+    }
+
+    impl TestCommand {
+        fn fake() -> TestCommand {
+            TestCommand {
+                repo: Faker.fake(),
+                branch_name: Faker.fake(),
+            }
+        }
+    }
+
+    impl GitCommands for TestCommand {
+        fn get_repo_name(&self) -> anyhow::Result<String> {
+            Ok(self.repo.to_owned())
+        }
+
+        fn get_branch_name(&self) -> anyhow::Result<String> {
+            Ok(self.branch_name.to_owned())
+        }
+
+        fn checkout(
+            &self,
+            _name: &str,
+            _status: crate::git_commands::CheckoutStatus,
+        ) -> anyhow::Result<()> {
+            todo!()
+        }
+
+        fn commit(&self, _msg: &str) -> anyhow::Result<()> {
+            todo!()
+        }
+    }
 
     #[test]
     fn commit_message_with_both_args_are_populated() -> anyhow::Result<()> {
@@ -56,7 +95,7 @@ mod tests {
         let context = Context {
             connection: setup_db(None)?,
             project_dir,
-            commands: Git { }
+            commands: TestCommand::fake(),
         };
 
         let args = Arguments {
@@ -80,7 +119,7 @@ mod tests {
         let context = Context {
             connection: setup_db(None)?,
             project_dir,
-            commands: Git { }
+            commands: TestCommand::fake(),
         };
 
         let args = Arguments {
@@ -99,17 +138,15 @@ mod tests {
 
     #[test]
     fn commit_template_ticket_num_is_replaced_with_branch_name() -> anyhow::Result<()> {
-        let project_dir= fake_project_dir()?;
-        let commands = Git { };
-        let name = commands.get_branch_name()?;
-        let repo = commands.get_repo_name()?;
+        let project_dir = fake_project_dir()?;
+        let commands = TestCommand::fake();
 
-        let branch = Branch::new(&name, &repo, None)?;
+        let branch = Branch::new(&commands.branch_name, &commands.repo, None)?;
 
         let context = Context {
             connection: setup_db(Some(&branch))?,
+            commands: commands.clone(),
             project_dir,
-            commands 
         };
 
         let args = Arguments {
@@ -118,7 +155,7 @@ mod tests {
         };
 
         let actual = args.commit_message("{ticket_num} {message}".into(), &context)?;
-        let expected = format!("[{}] {}", name, args.message.unwrap());
+        let expected = format!("[{}] {}", &commands.branch_name, args.message.unwrap());
 
         context.close()?;
 

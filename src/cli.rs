@@ -1,4 +1,9 @@
-use crate::{branch::Branch, git_commands::{GitCommands, CheckoutStatus}, template::Template, context::Context};
+use crate::{
+    branch::Branch,
+    context::Context,
+    git_commands::{CheckoutStatus, GitCommands},
+    template::Template,
+};
 use anyhow;
 use clap::{Args, Parser, Subcommand};
 
@@ -44,7 +49,9 @@ impl Checkout {
 
         // If the branch exists check it out
         if !create.is_err() {
-            context.commands.checkout(&self.name, CheckoutStatus::Existing)?;
+            context
+                .commands
+                .checkout(&self.name, CheckoutStatus::Existing)?;
         }
 
         Ok(())
