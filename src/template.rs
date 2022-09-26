@@ -266,10 +266,7 @@ mod tests {
         let project_root = &env::var("CARGO_MANIFEST_DIR")?;
         let templates_path = &dirs.config_dir().join("templates/");
 
-        copy_or_replace(
-            &Path::new(project_root).join("templates/"),
-            templates_path,
-        )?;
+        copy_or_replace(&Path::new(project_root).join("templates/"), templates_path)?;
 
         println!("{:?}", templates_path);
 
