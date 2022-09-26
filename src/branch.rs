@@ -2,10 +2,7 @@ use anyhow::Context as anyhow_context;
 use chrono::{DateTime, Utc};
 use rusqlite::{types::Type, Connection, Row};
 
-use crate::{
-    context::Context,
-    git_commands::GitCommands,
-};
+use crate::{context::Context, git_commands::GitCommands};
 
 #[derive(Debug, Clone)]
 pub struct Branch {

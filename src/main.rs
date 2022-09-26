@@ -15,7 +15,7 @@ use git_commands::Git;
 fn main() -> anyhow::Result<()> {
     let args = cli::Cli::parse();
     let context = Context::new(Git)?;
-    let actions = CommandActions::new(context)?;
+    let actions = CommandActions::new(&context)?;
 
     match args.command {
         cli::Command::Commit(template) => {
@@ -29,7 +29,7 @@ fn main() -> anyhow::Result<()> {
         }
     };
 
-    actions.close()?;
+    context.close()?;
 
     Ok(())
 }

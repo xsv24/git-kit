@@ -28,7 +28,7 @@ pub enum Command {
     Context(Current),
 }
 
-#[derive(Debug, Args)]
+#[derive(Debug, Args, Clone)]
 pub struct Current {
     /// Issue ticket number related to the current branch.
     #[clap(value_parser)]
@@ -49,7 +49,7 @@ impl Current {
     }
 }
 
-#[derive(Debug, Args)]
+#[derive(Debug, Args, Clone)]
 pub struct Checkout {
     /// Name of the branch to checkout or create.
     #[clap(value_parser)]
