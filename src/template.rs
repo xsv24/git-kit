@@ -63,7 +63,7 @@ impl Template {
     pub fn commit<C: GitCommands>(&self, context: &Context<C>) -> anyhow::Result<String> {
         let args = self.args();
         let template = self.read_file(&context.project_dir)?;
-        let contents = args.commit_message(template, &context)?;
+        let contents = args.commit_message(template, context)?;
 
         Ok(contents)
     }
