@@ -271,6 +271,14 @@ mod tests {
             templates_path,
         )?;
 
+        println!("{:?}", templates_path);
+
+        let paths = fs::read_dir(&templates_path).unwrap();
+
+        for path in paths {
+            println!("Name: {}", path.unwrap().path().display())
+        }
+
         Ok((dirs, templates_path.to_owned()))
     }
 
