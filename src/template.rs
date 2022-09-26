@@ -264,21 +264,20 @@ mod tests {
 
         // https://doc.rust-lang.org/cargo/reference/environment-variables.html
         let project_root = &env::var("CARGO_MANIFEST_DIR")?;
-        let templates_path = &dirs.config_dir().join("templates/commit");
+        let templates_path = &dirs.config_dir().join("templates/");
 
         copy_or_replace(
-            &Path::new(project_root).join("templates/commit"),
+            &Path::new(project_root).join("templates/"),
             templates_path,
         )?;
 
         println!("{:?}", templates_path);
 
-        let paths = fs::read_dir(&templates_path).unwrap();
+        let paths = fs::read_dir(&templates_path.join("commit/")).unwrap();
 
         for path in paths {
             println!("Name: {}", path.unwrap().path().display())
         }
-
         Ok((dirs, templates_path.to_owned()))
     }
 
