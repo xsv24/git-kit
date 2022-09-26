@@ -12,8 +12,8 @@ fn main() {
         let project_root = &env::var("CARGO_MANIFEST_DIR").unwrap();
 
         copy_or_replace(
-            &Path::new(project_root).join("templates/"),
-            &dirs.config_dir().join("templates/"),
+            &Path::new(project_root).join("templates/commit"),
+            &dirs.config_dir().join("templates/commit"),
         )
         .unwrap();
     }
