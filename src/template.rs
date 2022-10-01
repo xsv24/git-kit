@@ -259,7 +259,7 @@ mod tests {
     }
 
     fn fake_project_dir() -> anyhow::Result<(ProjectDirs, PathBuf)> {
-        let dirs = ProjectDirs::from(&format!("{}", Uuid::new_v4()), "xsv24", "git-kit")
+        let dirs = ProjectDirs::from("test", "xsv24", &format!("{}", Uuid::new_v4()))
             .context("Failed to retrieve 'git-kit' config")?;
 
         // https://doc.rust-lang.org/cargo/reference/environment-variables.html
