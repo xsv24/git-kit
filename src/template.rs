@@ -267,15 +267,28 @@ mod tests {
         let templates_path = &dirs.config_dir().join("templates/");
 
         copy_or_replace(&Path::new(project_root).join("templates/"), templates_path)?;
+        pretty_print_templates(&templates_path)?;
 
-        println!("{:?}", templates_path);
+        Ok((dirs, templates_path.to_owned()))
+    }
 
+    fn pretty_print_templates(templates_path: &PathBuf) -> anyhow::Result<()> {
         let paths = fs::read_dir(&templates_path.join("commit/")).unwrap();
 
+        println!("Coping templates ➜ {:?}", templates_path);
         for path in paths {
-            println!("Name: {}", path.unwrap().path().display())
+            let file_path = path.unwrap().path();
+            let file_path = file_path
+                .to_str()
+                .context("Expected template path to convert to a string")?;
+
+            println!(
+                "Copied template ➜ '{}'",
+                file_path.replace(&templates_path.display().to_string(), "")
+            );
         }
-        Ok((dirs, templates_path.to_owned()))
+
+        Ok(())
     }
 
     fn fake_branch(name: Option<String>, repo: Option<String>) -> anyhow::Result<Branch> {
