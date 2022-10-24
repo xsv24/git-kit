@@ -117,24 +117,25 @@ mod tests {
     }
 
     #[test]
-    fn when_ticket_num_with_whitespace_is_provided_square_brackets_are_removed(
-    ) -> anyhow::Result<()> {
-        let context = Context {
-            connection: setup_db(None)?,
-            project_dir: fake_project_dir()?,
-            commands: TestCommand::fake(),
-        };
+    fn when_ticket_num_is_empty_square_brackets_are_removed() -> anyhow::Result<()> {
+        for ticket in [Some("".into()), Some("   ".into()), None] {
+            let context = Context {
+                connection: setup_db(None)?,
+                project_dir: fake_project_dir()?,
+                commands: TestCommand::fake(),
+            };
 
-        let args = Arguments {
-            ticket: Some("      ".into()),
-            message: Some(Faker.fake()),
-        };
+            let args = Arguments {
+                ticket,
+                message: Some(Faker.fake()),
+            };
 
-        let actual = args.commit_message("{ticket_num} {message}".into(), &context)?;
-        let expected = format!("{}", args.message.unwrap());
+            let actual = args.commit_message("{ticket_num} {message}".into(), &context)?;
+            let expected = format!("{}", args.message.unwrap());
 
-        context.close()?;
-        assert_eq!(actual, expected);
+            context.close()?;
+            assert_eq!(actual, expected);
+        }
 
         Ok(())
     }
