@@ -2,22 +2,22 @@ use anyhow::{anyhow, Context as anyhow_context};
 use directories::ProjectDirs;
 use rusqlite::Connection;
 
-use crate::git_commands::GitCommands;
+use crate::domain::commands::GitCommands;
 
-pub struct Context<C: GitCommands> {
+pub struct AppContext<C: GitCommands> {
     pub project_dir: ProjectDirs,
     pub connection: Connection,
     pub commands: C,
 }
 
-impl<C: GitCommands> Context<C> {
-    pub fn new(commands: C) -> anyhow::Result<Context<C>> {
+impl<C: GitCommands> AppContext<C> {
+    pub fn new(commands: C) -> anyhow::Result<AppContext<C>> {
         let project_dir = ProjectDirs::from("dev", "xsv24", "git-kit")
             .context("Failed to retrieve 'git-kit' config")?;
 
         let connection = Connection::open(project_dir.config_dir().join("db"))?;
 
-        Ok(Context {
+        Ok(AppContext {
             project_dir,
             connection,
             commands,

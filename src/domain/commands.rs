@@ -1,26 +1,49 @@
 use crate::{
-    branch::Branch,
-    cli::{Checkout, Current},
-    context::Context,
-    git_commands::{CheckoutStatus, GitCommands},
-    template::Template,
+    adapters::persist::Persist,
+    app_context::AppContext,
+    cli::{checkout, commit, context},
 };
 
-pub trait Actions<C: GitCommands> {
+use super::Checkout;
+
+#[derive(PartialEq, Eq)]
+pub enum CheckoutStatus {
+    New,
+    Existing,
+}
+
+/// Used to abstract cli git commands for testings.
+pub trait GitCommands {
+    /// Get the current git repository name.
+    fn get_repo_name(&self) -> anyhow::Result<String>;
+
+    /// Get the current checked out branch name.
+    fn get_branch_name(&self) -> anyhow::Result<String>;
+
+    /// Checkout an existing branch of create a new branch if not.
+    fn checkout(&self, name: &str, status: CheckoutStatus) -> anyhow::Result<()>;
+
+    /// Commit changes and open editor with the template.
+    fn commit(&self, msg: &str) -> anyhow::Result<()>;
+}
+
+pub trait Commands<C: GitCommands> {
     /// Actions on a context update on the current branch.
-    fn current(&self, current: Current) -> anyhow::Result<()>;
+    fn current(&self, context: context::Arguments) -> anyhow::Result<()>;
+
     /// Actions on a checkout of a new or existing branch.
-    fn checkout(&self, checkout: Checkout) -> anyhow::Result<()>;
+    fn checkout(&self, args: checkout::Arguments) -> anyhow::Result<()>;
+
     /// Actions on a commit.
-    fn commit(&self, template: Template) -> anyhow::Result<()>;
+    fn commit(&self, template: commit::Template) -> anyhow::Result<()>;
 }
 
 pub struct CommandActions<'a, C: GitCommands> {
-    context: &'a Context<C>,
+    context: &'a AppContext<C>,
 }
 
 impl<'a, C: GitCommands> CommandActions<'a, C> {
-    pub fn new(context: &Context<C>) -> anyhow::Result<CommandActions<C>> {
+    pub fn new(context: &AppContext<C>) -> anyhow::Result<CommandActions<C>> {
         // TODO: Move into build script ?
         context.connection.execute(
             "CREATE TABLE IF NOT EXISTS branch (
@@ -36,20 +59,20 @@ impl<'a, C: GitCommands> CommandActions<'a, C> {
     }
 }
 
-impl<'a, C: GitCommands> Actions<C> for CommandActions<'a, C> {
-    fn current(&self, current: Current) -> anyhow::Result<()> {
+impl<'a, C: GitCommands> Commands<C> for CommandActions<'a, C> {
+    fn current(&self, context: context::Arguments) -> anyhow::Result<()> {
         // We want to store the branch name against and ticket number
         // So whenever we commit we get the ticket number from the branch
         let repo_name = self.context.commands.get_repo_name()?;
         let branch_name = self.context.commands.get_branch_name()?;
 
-        let branch = Branch::new(&branch_name, &repo_name, Some(current.ticket))?;
-        branch.insert_or_update(&self.context.connection)?;
+        let branch = Checkout::new(&branch_name, &repo_name, Some(context.ticket))?;
+        Persist::insert_or_update(&branch, &self.context.connection)?;
 
         Ok(())
     }
 
-    fn checkout(&self, checkout: Checkout) -> anyhow::Result<()> {
+    fn checkout(&self, checkout: checkout::Arguments) -> anyhow::Result<()> {
         // Attempt to create branch
         let create = self
             .context
@@ -66,13 +89,13 @@ impl<'a, C: GitCommands> Actions<C> for CommandActions<'a, C> {
         // We want to store the branch name against and ticket number
         // So whenever we commit we get the ticket number from the branch
         let repo_name = self.context.commands.get_repo_name()?;
-        let branch = Branch::new(&checkout.name, &repo_name, checkout.ticket.clone())?;
-        branch.insert_or_update(&self.context.connection)?;
+        let branch = Checkout::new(&checkout.name, &repo_name, checkout.ticket.clone())?;
+        Persist::insert_or_update(&branch, &self.context.connection)?;
 
         Ok(())
     }
 
-    fn commit(&self, template: Template) -> anyhow::Result<()> {
+    fn commit(&self, template: commit::Template) -> anyhow::Result<()> {
         let contents = template.commit(self.context)?;
         self.context.commands.commit(&contents)?;
 
@@ -89,11 +112,7 @@ mod tests {
     use rusqlite::Connection;
     use uuid::Uuid;
 
-    use crate::branch::Branch;
-    use crate::cli::Checkout;
-    use crate::cli::Current;
-    use crate::git_commands::CheckoutStatus;
-    use crate::{context::Context, git_commands::GitCommands};
+    use crate::app_context::AppContext;
 
     use super::*;
 
@@ -102,7 +121,7 @@ mod tests {
         // Arrange
         let repo = Faker.fake::<String>();
 
-        let command = Checkout {
+        let command = checkout::Arguments {
             name: Faker.fake::<String>(),
             ticket: Some(Faker.fake()),
         };
@@ -120,7 +139,7 @@ mod tests {
         actions.checkout(command.clone())?;
 
         // Assert
-        let branch = Branch::get(&command.name, &repo, &context)?;
+        let branch = Persist::get(&command.name, &repo, &context.connection)?;
         let name = format!(
             "{}-{}",
             &git_commands.repo.unwrap(),
@@ -140,7 +159,7 @@ mod tests {
         // Arrange
         let repo = Faker.fake::<String>();
 
-        let command = Checkout {
+        let command = checkout::Arguments {
             name: Faker.fake::<String>(),
             ticket: Some(Faker.fake()),
         };
@@ -165,7 +184,7 @@ mod tests {
         actions.checkout(command.clone())?;
 
         // Assert
-        let branch = Branch::get(&command.name, &repo, &context)?;
+        let branch = Persist::get(&command.name, &repo, &context.connection)?;
         let name = format!(
             "{}-{}",
             &git_commands.repo.unwrap(),
@@ -183,7 +202,7 @@ mod tests {
     #[test]
     fn checkout_on_fail_to_checkout_branch_nothing_is_persisted() -> anyhow::Result<()> {
         // Arrange
-        let command = Checkout {
+        let command = checkout::Arguments {
             name: Faker.fake::<String>(),
             ticket: Some(Faker.fake()),
         };
@@ -205,7 +224,7 @@ mod tests {
         // Assert
         assert!(result.is_err());
 
-        let error = Branch::get(&command.name, &repo, &context)
+        let error = Persist::get(&command.name, &repo, &context.connection)
             .expect_err("Expected error as there should be no stored branches.");
 
         assert_eq!(error.to_string(), "Query returned no rows");
@@ -220,7 +239,7 @@ mod tests {
         // Arrange
         let repo = Faker.fake::<String>();
 
-        let command = Checkout {
+        let command = checkout::Arguments {
             name: Faker.fake::<String>(),
             ticket: None,
         };
@@ -238,7 +257,7 @@ mod tests {
         actions.checkout(command.clone())?;
 
         // Assert
-        let branch = Branch::get(&command.name, &repo, &context)?;
+        let branch = Persist::get(&command.name, &repo, &context.connection)?;
         let name = format!(
             "{}-{}",
             &git_commands.repo.unwrap(),
@@ -258,7 +277,7 @@ mod tests {
         // Arrange
         let branch_name = Faker.fake::<String>();
         let repo = Faker.fake::<String>();
-        let command = Current {
+        let command = context::Arguments {
             ticket: Faker.fake(),
         };
 
@@ -275,7 +294,7 @@ mod tests {
         actions.current(command.clone())?;
 
         // Assert
-        let branch = Branch::get(&branch_name, &repo, &context)?;
+        let branch = Persist::get(&branch_name, &repo, &context.connection)?;
         let name = format!(
             "{}-{}",
             &git_commands.repo.unwrap(),
@@ -297,10 +316,10 @@ mod tests {
         Ok(dirs)
     }
 
-    fn fake_context<C: GitCommands>(commands: C) -> anyhow::Result<Context<C>> {
+    fn fake_context<C: GitCommands>(commands: C) -> anyhow::Result<AppContext<C>> {
         let conn = Connection::open_in_memory()?;
 
-        let context = Context {
+        let context = AppContext {
             connection: conn,
             project_dir: fake_project_dir()?,
             commands,
@@ -343,11 +362,7 @@ mod tests {
                 .map_err(|e| anyhow!(e.to_owned()))
         }
 
-        fn checkout(
-            &self,
-            name: &str,
-            status: crate::git_commands::CheckoutStatus,
-        ) -> anyhow::Result<()> {
+        fn checkout(&self, name: &str, status: CheckoutStatus) -> anyhow::Result<()> {
             (self.checkout_res)(name, status)
         }
 

@@ -1,60 +1,41 @@
-use anyhow::Context as anyhow_context;
+use anyhow::Context;
 use chrono::{DateTime, Utc};
 use rusqlite::{types::Type, Connection, Row};
 
-use crate::{context::Context, git_commands::GitCommands};
+use crate::domain::Checkout;
 
-#[derive(Debug, Clone)]
-pub struct Branch {
-    pub name: String,
-    pub ticket: String,
-    pub data: Option<Vec<u8>>,
-    pub created: DateTime<Utc>,
-}
+pub struct Persist;
 
-impl Branch {
-    pub fn new(name: &str, repo: &str, ticket: Option<String>) -> anyhow::Result<Branch> {
-        Ok(Branch {
-            name: format!("{}-{}", repo.trim(), name.trim()),
-            created: Utc::now(),
-            ticket: ticket.unwrap_or_else(|| name.into()),
-            data: None,
-        })
-    }
-
-    pub fn insert_or_update(&self, conn: &Connection) -> anyhow::Result<()> {
+impl Persist {
+    pub fn insert_or_update(checkout: &Checkout, conn: &Connection) -> anyhow::Result<()> {
         conn.execute(
             "REPLACE INTO branch (name, ticket, data, created) VALUES (?1, ?2, ?3, ?4)",
             (
-                &self.name,
-                &self.ticket,
-                &self.data,
-                &self.created.to_rfc3339(),
+                &checkout.name,
+                &checkout.ticket,
+                &checkout.data,
+                &checkout.created.to_rfc3339(),
             ),
         )
-        .with_context(|| format!("Failed to insert branch '{}'", &self.name))?;
+        .with_context(|| format!("Failed to insert branch '{}'", &checkout.name))?;
 
         Ok(())
     }
 
-    pub fn get<C: GitCommands>(
-        branch: &str,
-        repo: &str,
-        connext: &Context<C>,
-    ) -> anyhow::Result<Branch> {
+    pub fn get(branch: &str, repo: &str, conn: &Connection) -> anyhow::Result<Checkout> {
         let name = format!("{}-{}", repo.trim(), branch.trim());
 
-        let branch = connext.connection.query_row(
+        let branch = conn.query_row(
             "SELECT name, ticket, data, created FROM branch where name = ?",
             [name],
-            |row| Branch::try_from(row),
+            |row| Checkout::try_from(row),
         )?;
 
         Ok(branch)
     }
 }
 
-impl<'a> TryFrom<&Row<'a>> for Branch {
+impl<'a> TryFrom<&Row<'a>> for Checkout {
     type Error = rusqlite::Error;
 
     fn try_from(value: &Row) -> Result<Self, Self::Error> {
@@ -70,7 +51,7 @@ impl<'a> TryFrom<&Row<'a>> for Branch {
             })?
             .with_timezone(&Utc);
 
-        let branch = Branch {
+        let branch = Checkout {
             name: value.get(0)?,
             ticket: value.get(1)?,
             data: value.get(2)?,
@@ -83,76 +64,14 @@ impl<'a> TryFrom<&Row<'a>> for Branch {
 
 #[cfg(test)]
 mod tests {
-    use crate::git_commands::Git;
+    use std::collections::HashMap;
+
+    use crate::{adapters::Git, app_context::AppContext};
 
     use super::*;
-
-    use anyhow::Context as anyhow_context;
-    use chrono::Utc;
     use directories::ProjectDirs;
     use fake::{Fake, Faker};
-    use rusqlite::Connection;
-    use std::collections::HashMap;
     use uuid::Uuid;
-
-    #[test]
-    fn creating_branch_with_ticket_populates_correctly() -> anyhow::Result<()> {
-        // Arrange
-        let now = Utc::now();
-        let repo = Faker.fake::<String>();
-        let name = Faker.fake::<String>();
-        let ticket = Faker.fake::<String>();
-
-        // Act
-        let branch = Branch::new(&name, &repo, Some(ticket.clone()))?;
-
-        // Assert
-        assert_eq!(branch.name, format!("{}-{}", &repo, &name));
-        assert_eq!(branch.ticket, ticket);
-        assert!(branch.created > now);
-        assert_eq!(branch.data, None);
-
-        Ok(())
-    }
-
-    #[test]
-    fn creating_branch_without_ticket_defaults_to_name() -> anyhow::Result<()> {
-        // Arrange
-        let now = Utc::now();
-        let name = Faker.fake::<String>();
-        let repo = Faker.fake::<String>();
-
-        // Act
-        let branch = Branch::new(&name, &repo, None)?;
-
-        // Assert
-        assert_eq!(branch.name, format!("{}-{}", &repo, &name));
-        assert_eq!(branch.ticket, name);
-        assert!(branch.created > now);
-        assert_eq!(branch.data, None);
-
-        Ok(())
-    }
-
-    #[test]
-    fn branch_name_is_trimmed() -> anyhow::Result<()> {
-        // Arrange
-        let now = Utc::now();
-        let name = format!("{}\n", Faker.fake::<String>());
-        let ticket = Faker.fake::<String>();
-        let repo = Faker.fake::<String>();
-
-        // Act
-        let branch = Branch::new(&name, &repo, Some(ticket.clone()))?;
-
-        // Assert
-        assert_eq!(branch.name, format!("{}-{}", &repo.trim(), &name.trim()));
-        assert_eq!(branch.ticket, ticket);
-        assert!(branch.created > now);
-        assert_eq!(branch.data, None);
-
-        Ok(())
-    }
 
     #[test]
     fn insert_or_update_creates_a_new_item_if_not_exists() -> anyhow::Result<()> {
@@ -161,7 +80,7 @@ mod tests {
         let conn = setup_db()?;
 
         // Act
-        branch.insert_or_update(&conn)?;
+        Persist::insert_or_update(&branch, &conn)?;
 
         // Assert
         assert_eq!(branch_count(&conn)?, 1);
@@ -192,13 +111,13 @@ mod tests {
             ),
         )?;
 
-        let updated_branch = Branch {
+        let updated_branch = Checkout {
             name: branch.name,
             ..fake_branch(None, None)?
         };
 
         // Act
-        updated_branch.insert_or_update(&conn)?;
+        Persist::insert_or_update(&updated_branch, &conn)?;
 
         // Assert
         assert_eq!(branch_count(&conn)?, 1);
@@ -216,13 +135,13 @@ mod tests {
     #[test]
     fn get_retrieves_correct_branch() -> anyhow::Result<()> {
         // Arrange
-        let context = Context {
+        let context = AppContext {
             connection: setup_db()?,
             project_dir: fake_project_dir()?,
             commands: Git,
         };
 
-        let mut branches: HashMap<String, Branch> = HashMap::new();
+        let mut branches: HashMap<String, Checkout> = HashMap::new();
         let repo = Faker.fake::<String>();
 
         // Insert random collection of branches.
@@ -253,7 +172,7 @@ mod tests {
             .with_context(|| "Expected to find a matching branch")?;
 
         // Act
-        let branch = Branch::get(&random_key, &repo, &context)?;
+        let branch = Persist::get(&random_key, &repo, &context.connection)?;
 
         context.close()?;
         // Assert
@@ -271,7 +190,7 @@ mod tests {
     #[test]
     fn get_trims_name_before_retrieving() -> anyhow::Result<()> {
         // Arrange
-        let context = Context {
+        let context = AppContext {
             connection: setup_db()?,
             project_dir: fake_project_dir()?,
             commands: Git,
@@ -293,7 +212,7 @@ mod tests {
         )?;
 
         // Act
-        let actual = Branch::get(&format!(" {}\n", name), &repo, &context)?;
+        let actual = Persist::get(&format!(" {}\n", name), &repo, &context.connection)?;
 
         context.close()?;
         // Assert
@@ -302,12 +221,12 @@ mod tests {
         Ok(())
     }
 
-    fn fake_branch(name: Option<String>, repo: Option<String>) -> anyhow::Result<Branch> {
+    fn fake_branch(name: Option<String>, repo: Option<String>) -> anyhow::Result<Checkout> {
         let name = name.unwrap_or(Faker.fake());
         let repo = repo.unwrap_or(Faker.fake());
         let ticket: Option<String> = Faker.fake();
 
-        Ok(Branch::new(&name, &repo, ticket)?)
+        Ok(Checkout::new(&name, &repo, ticket)?)
     }
 
     fn fake_project_dir() -> anyhow::Result<ProjectDirs> {

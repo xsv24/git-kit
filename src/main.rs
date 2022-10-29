@@ -1,30 +1,38 @@
-pub mod actions;
-pub mod args;
-pub mod branch;
+pub mod adapters;
+pub mod app_context;
 pub mod cli;
-pub mod context;
-pub mod git_commands;
-pub mod template;
-pub mod try_convert;
+pub mod domain;
+pub mod utils;
 
-use actions::{Actions, CommandActions};
+use adapters::Git;
+use app_context::AppContext;
 use clap::Parser;
-use context::Context;
-use git_commands::Git;
+use cli::commands::Command;
+use domain::commands::{CommandActions, Commands};
+
+#[derive(Debug, Parser)]
+#[clap(name = "git-kit")]
+#[clap(bin_name = "git-kit")]
+#[clap(about = "git cli containing templates & utilities.", long_about = None)]
+#[clap(version)]
+pub struct Cli {
+    #[clap(subcommand)]
+    pub command: Command,
+}
 
 fn main() -> anyhow::Result<()> {
-    let args = cli::Cli::parse();
-    let context = Context::new(Git)?;
+    let args = Cli::parse();
+    let context = AppContext::new(Git)?;
     let actions = CommandActions::new(&context)?;
 
     match args.command {
-        cli::Command::Commit(template) => {
+        Command::Commit(template) => {
             actions.commit(template)?;
         }
-        cli::Command::Checkout(checkout) => {
+        Command::Checkout(checkout) => {
             actions.checkout(checkout)?;
         }
-        cli::Command::Context(current) => {
+        Command::Context(current) => {
             actions.current(current)?;
         }
     };

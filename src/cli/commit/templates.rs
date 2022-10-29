@@ -3,7 +3,7 @@ use clap::Subcommand;
 use directories::ProjectDirs;
 use std::fs;
 
-use crate::{args::Arguments, context::Context, git_commands::GitCommands};
+use crate::{app_context::AppContext, cli::commit::args::Arguments, domain::commands::GitCommands};
 
 #[derive(Debug, Subcommand)]
 pub enum Template {
@@ -60,7 +60,7 @@ impl Template {
         Ok(contents)
     }
 
-    pub fn commit<C: GitCommands>(&self, context: &Context<C>) -> anyhow::Result<String> {
+    pub fn commit<C: GitCommands>(&self, context: &AppContext<C>) -> anyhow::Result<String> {
         let args = self.args();
         let template = self.read_file(&context.project_dir)?;
         let contents = args.commit_message(template, context)?;
@@ -79,7 +79,7 @@ mod tests {
     };
     use uuid::Uuid;
 
-    use crate::{branch::Branch, git_commands::Git};
+    use crate::{adapters::Git, domain::Checkout};
 
     use super::*;
 
@@ -156,7 +156,7 @@ mod tests {
     fn commit_msg_without_ticket_override_using_branch_name() -> anyhow::Result<()> {
         let (dirs, templates_path) = fake_project_dir()?;
 
-        let context = Context {
+        let context = AppContext {
             project_dir: dirs,
             connection: Connection::open_in_memory()?,
             commands: Git,
@@ -204,7 +204,7 @@ mod tests {
     fn commit_msg_with_ticket_override() -> anyhow::Result<()> {
         let (dirs, templates_path) = fake_project_dir()?;
 
-        let context = Context {
+        let context = AppContext {
             project_dir: dirs,
             connection: Connection::open_in_memory()?,
             commands: Git,
@@ -291,14 +291,14 @@ mod tests {
         Ok(())
     }
 
-    fn fake_branch(name: Option<String>, repo: Option<String>) -> anyhow::Result<Branch> {
+    fn fake_branch(name: Option<String>, repo: Option<String>) -> anyhow::Result<Checkout> {
         let name = name.unwrap_or(Faker.fake());
         let repo = repo.unwrap_or(Faker.fake());
 
-        Ok(Branch::new(&name, &repo, None)?)
+        Ok(Checkout::new(&name, &repo, None)?)
     }
 
-    fn setup_db(conn: &Connection, branch: Option<&Branch>) -> anyhow::Result<()> {
+    fn setup_db(conn: &Connection, branch: Option<&Checkout>) -> anyhow::Result<()> {
         conn.execute(
             "CREATE TABLE branch (
                 name TEXT NOT NULL PRIMARY KEY,
