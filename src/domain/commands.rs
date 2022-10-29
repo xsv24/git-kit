@@ -1,5 +1,5 @@
 use crate::{
-    adapters::persist::Persist,
+    adapters::store::Store,
     app_context::AppContext,
     cli::{checkout, commit, context},
 };
@@ -67,7 +67,7 @@ impl<'a, C: GitCommands> Commands<C> for CommandActions<'a, C> {
         let branch_name = self.context.commands.get_branch_name()?;
 
         let branch = Checkout::new(&branch_name, &repo_name, Some(context.ticket))?;
-        Persist::insert_or_update(&branch, &self.context.connection)?;
+        Store::insert_or_update(&branch, &self.context.connection)?;
 
         Ok(())
     }
@@ -90,7 +90,7 @@ impl<'a, C: GitCommands> Commands<C> for CommandActions<'a, C> {
         // So whenever we commit we get the ticket number from the branch
         let repo_name = self.context.commands.get_repo_name()?;
         let branch = Checkout::new(&checkout.name, &repo_name, checkout.ticket.clone())?;
-        Persist::insert_or_update(&branch, &self.context.connection)?;
+        Store::insert_or_update(&branch, &self.context.connection)?;
 
         Ok(())
     }
@@ -139,7 +139,7 @@ mod tests {
         actions.checkout(command.clone())?;
 
         // Assert
-        let branch = Persist::get(&command.name, &repo, &context.connection)?;
+        let branch = Store::get(&command.name, &repo, &context.connection)?;
         let name = format!(
             "{}-{}",
             &git_commands.repo.unwrap(),
@@ -184,7 +184,7 @@ mod tests {
         actions.checkout(command.clone())?;
 
         // Assert
-        let branch = Persist::get(&command.name, &repo, &context.connection)?;
+        let branch = Store::get(&command.name, &repo, &context.connection)?;
         let name = format!(
             "{}-{}",
             &git_commands.repo.unwrap(),
@@ -224,7 +224,7 @@ mod tests {
         // Assert
         assert!(result.is_err());
 
-        let error = Persist::get(&command.name, &repo, &context.connection)
+        let error = Store::get(&command.name, &repo, &context.connection)
             .expect_err("Expected error as there should be no stored branches.");
 
         assert_eq!(error.to_string(), "Query returned no rows");
@@ -257,7 +257,7 @@ mod tests {
         actions.checkout(command.clone())?;
 
         // Assert
-        let branch = Persist::get(&command.name, &repo, &context.connection)?;
+        let branch = Store::get(&command.name, &repo, &context.connection)?;
         let name = format!(
             "{}-{}",
             &git_commands.repo.unwrap(),
@@ -294,7 +294,7 @@ mod tests {
         actions.current(command.clone())?;
 
         // Assert
-        let branch = Persist::get(&branch_name, &repo, &context.connection)?;
+        let branch = Store::get(&branch_name, &repo, &context.connection)?;
         let name = format!(
             "{}-{}",
             &git_commands.repo.unwrap(),

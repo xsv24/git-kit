@@ -1,4 +1,4 @@
-use crate::{adapters::persist::Persist, app_context::AppContext, domain::commands::GitCommands};
+use crate::{adapters::store::Store, app_context::AppContext, domain::commands::GitCommands};
 use clap::Args;
 
 #[derive(Debug, Args, PartialEq, Eq, Clone)]
@@ -25,7 +25,7 @@ impl Arguments {
                 (_, 0) => None,
                 (value, _) => Some(value.into()),
             },
-            None => Persist::get(
+            None => Store::get(
                 &context.commands.get_branch_name()?,
                 &context.commands.get_repo_name()?,
                 &context.connection,

@@ -1,4 +1,4 @@
 mod git;
-pub mod persist;
+pub mod store;
 
 pub use git::Git;
