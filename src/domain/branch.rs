@@ -1,16 +1,16 @@
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone)]
-pub struct Checkout {
+pub struct Branch {
     pub name: String,
     pub ticket: String,
     pub created: DateTime<Utc>,
     pub data: Option<Vec<u8>>,
 }
 
-impl Checkout {
-    pub fn new(name: &str, repo: &str, ticket: Option<String>) -> anyhow::Result<Checkout> {
-        Ok(Checkout {
+impl Branch {
+    pub fn new(name: &str, repo: &str, ticket: Option<String>) -> anyhow::Result<Branch> {
+        Ok(Branch {
             name: format!("{}-{}", repo.trim(), name.trim()),
             created: Utc::now(),
             ticket: ticket.unwrap_or_else(|| name.into()),
@@ -35,7 +35,7 @@ mod tests {
         let ticket = Faker.fake::<String>();
 
         // Act
-        let branch = Checkout::new(&name, &repo, Some(ticket.clone()))?;
+        let branch = Branch::new(&name, &repo, Some(ticket.clone()))?;
 
         // Assert
         assert_eq!(branch.name, format!("{}-{}", &repo, &name));
@@ -54,7 +54,7 @@ mod tests {
         let repo = Faker.fake::<String>();
 
         // Act
-        let branch = Checkout::new(&name, &repo, None)?;
+        let branch = Branch::new(&name, &repo, None)?;
 
         // Assert
         assert_eq!(branch.name, format!("{}-{}", &repo, &name));
@@ -74,7 +74,7 @@ mod tests {
         let repo = Faker.fake::<String>();
 
         // Act
-        let branch = Checkout::new(&name, &repo, Some(ticket.clone()))?;
+        let branch = Branch::new(&name, &repo, Some(ticket.clone()))?;
 
         // Assert
         assert_eq!(branch.name, format!("{}-{}", &repo.trim(), &name.trim()));

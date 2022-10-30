@@ -1,4 +1,4 @@
-use crate::{adapters::store::Store, app_context::AppContext, domain::commands::GitCommands};
+use crate::{app_context::AppContext, domain::commands::GitCommands, domain::store::Store};
 use clap::Args;
 
 #[derive(Debug, Args, PartialEq, Eq, Clone)]
@@ -13,10 +13,10 @@ pub struct Arguments {
 }
 
 impl Arguments {
-    pub fn commit_message<C: GitCommands>(
+    pub fn commit_message<C: GitCommands, S: Store>(
         &self,
         template: String,
-        context: &AppContext<C>,
+        context: &AppContext<C, S>,
     ) -> anyhow::Result<String> {
         let ticket = self.ticket.as_ref().map(|num| num.trim());
 
@@ -25,12 +25,13 @@ impl Arguments {
                 (_, 0) => None,
                 (value, _) => Some(value.into()),
             },
-            None => Store::get(
-                &context.commands.get_branch_name()?,
-                &context.commands.get_repo_name()?,
-                &context.connection,
-            )
-            .map_or(None, |branch| Some(branch.ticket)),
+            None => context
+                .store
+                .get(
+                    &context.commands.get_branch_name()?,
+                    &context.commands.get_repo_name()?,
+                )
+                .map_or(None, |branch| Some(branch.ticket)),
         };
 
         let contents = if let Some(ticket) = ticket_num {
@@ -55,9 +56,12 @@ mod tests {
     use rusqlite::Connection;
     use uuid::Uuid;
 
-    use crate::domain::{
-        commands::{CheckoutStatus, GitCommands},
-        Checkout,
+    use crate::{
+        adapters::sqlite::Sqlite,
+        domain::{
+            commands::{CheckoutStatus, GitCommands},
+            Branch,
+        },
     };
 
     use super::*;
@@ -98,7 +102,7 @@ mod tests {
     #[test]
     fn empty_ticket_num_removes_square_brackets() -> anyhow::Result<()> {
         let context = AppContext {
-            connection: setup_db(None)?,
+            store: Sqlite::new(setup_db(None)?)?,
             project_dir: fake_project_dir()?,
             commands: TestCommand::fake(),
         };
@@ -121,7 +125,7 @@ mod tests {
     fn when_ticket_num_is_empty_square_brackets_are_removed() -> anyhow::Result<()> {
         for ticket in [Some("".into()), Some("   ".into()), None] {
             let context = AppContext {
-                connection: setup_db(None)?,
+                store: Sqlite::new(setup_db(None)?)?,
                 project_dir: fake_project_dir()?,
                 commands: TestCommand::fake(),
             };
@@ -144,7 +148,7 @@ mod tests {
     #[test]
     fn commit_message_with_both_args_are_populated() -> anyhow::Result<()> {
         let context = AppContext {
-            connection: setup_db(None)?,
+            store: Sqlite::new(setup_db(None)?)?,
             project_dir: fake_project_dir()?,
             commands: TestCommand::fake(),
         };
@@ -166,7 +170,7 @@ mod tests {
     #[test]
     fn commit_template_message_is_replaced_with_empty_str() -> anyhow::Result<()> {
         let context = AppContext {
-            connection: setup_db(None)?,
+            store: Sqlite::new(setup_db(None)?)?,
             project_dir: fake_project_dir()?,
             commands: TestCommand::fake(),
         };
@@ -189,10 +193,10 @@ mod tests {
     fn commit_template_ticket_num_is_replaced_with_branch_name() -> anyhow::Result<()> {
         let commands = TestCommand::fake();
 
-        let branch = Checkout::new(&commands.branch_name, &commands.repo, None)?;
+        let branch = Branch::new(&commands.branch_name, &commands.repo, None)?;
 
         let context = AppContext {
-            connection: setup_db(Some(&branch))?,
+            store: Sqlite::new(setup_db(Some(&branch))?)?,
             commands: commands.clone(),
             project_dir: fake_project_dir()?,
         };
@@ -219,7 +223,7 @@ mod tests {
         Ok(dirs)
     }
 
-    fn setup_db(branch: Option<&Checkout>) -> anyhow::Result<Connection> {
+    fn setup_db(branch: Option<&Branch>) -> anyhow::Result<Connection> {
         let conn = Connection::open_in_memory()?;
 
         conn.execute(

@@ -1,10 +1,9 @@
 use crate::{
-    adapters::store::Store,
     app_context::AppContext,
     cli::{checkout, commit, context},
 };
 
-use super::Checkout;
+use super::{Branch, Store};
 
 #[derive(PartialEq, Eq)]
 pub enum CheckoutStatus {
@@ -38,36 +37,27 @@ pub trait Commands<C: GitCommands> {
     fn commit(&self, template: commit::Template) -> anyhow::Result<()>;
 }
 
-pub struct CommandActions<'a, C: GitCommands> {
-    context: &'a AppContext<C>,
+pub struct CommandActions<'a, C: GitCommands, S: Store> {
+    context: &'a AppContext<C, S>,
 }
 
-impl<'a, C: GitCommands> CommandActions<'a, C> {
-    pub fn new(context: &AppContext<C>) -> anyhow::Result<CommandActions<C>> {
+impl<'a, C: GitCommands, S: Store> CommandActions<'a, C, S> {
+    pub fn new(context: &AppContext<C, S>) -> anyhow::Result<CommandActions<C, S>> {
         // TODO: Move into build script ?
-        context.connection.execute(
-            "CREATE TABLE IF NOT EXISTS branch (
-            name TEXT NOT NULL PRIMARY KEY,
-            ticket TEXT,
-            data BLOB,
-            created TEXT NOT NULL
-        )",
-            (),
-        )?;
 
         Ok(CommandActions { context })
     }
 }
 
-impl<'a, C: GitCommands> Commands<C> for CommandActions<'a, C> {
+impl<'a, C: GitCommands, S: Store> Commands<C> for CommandActions<'a, C, S> {
     fn current(&self, context: context::Arguments) -> anyhow::Result<()> {
         // We want to store the branch name against and ticket number
         // So whenever we commit we get the ticket number from the branch
         let repo_name = self.context.commands.get_repo_name()?;
         let branch_name = self.context.commands.get_branch_name()?;
 
-        let branch = Checkout::new(&branch_name, &repo_name, Some(context.ticket))?;
-        Store::insert_or_update(&branch, &self.context.connection)?;
+        let branch = Branch::new(&branch_name, &repo_name, Some(context.ticket))?;
+        self.context.store.insert_or_update(&branch)?;
 
         Ok(())
     }
@@ -89,8 +79,8 @@ impl<'a, C: GitCommands> Commands<C> for CommandActions<'a, C> {
         // We want to store the branch name against and ticket number
         // So whenever we commit we get the ticket number from the branch
         let repo_name = self.context.commands.get_repo_name()?;
-        let branch = Checkout::new(&checkout.name, &repo_name, checkout.ticket.clone())?;
-        Store::insert_or_update(&branch, &self.context.connection)?;
+        let branch = Branch::new(&checkout.name, &repo_name, checkout.ticket.clone())?;
+        self.context.store.insert_or_update(&branch)?;
 
         Ok(())
     }
@@ -112,7 +102,9 @@ mod tests {
     use rusqlite::Connection;
     use uuid::Uuid;
 
+    use crate::adapters::sqlite::Sqlite;
     use crate::app_context::AppContext;
+    use crate::domain::Store;
 
     use super::*;
 
@@ -139,7 +131,7 @@ mod tests {
         actions.checkout(command.clone())?;
 
         // Assert
-        let branch = Store::get(&command.name, &repo, &context.connection)?;
+        let branch = context.store.get(&command.name, &repo)?;
         let name = format!(
             "{}-{}",
             &git_commands.repo.unwrap(),
@@ -184,7 +176,7 @@ mod tests {
         actions.checkout(command.clone())?;
 
         // Assert
-        let branch = Store::get(&command.name, &repo, &context.connection)?;
+        let branch = context.store.get(&command.name, &repo)?;
         let name = format!(
             "{}-{}",
             &git_commands.repo.unwrap(),
@@ -224,7 +216,9 @@ mod tests {
         // Assert
         assert!(result.is_err());
 
-        let error = Store::get(&command.name, &repo, &context.connection)
+        let error = context
+            .store
+            .get(&command.name, &repo)
             .expect_err("Expected error as there should be no stored branches.");
 
         assert_eq!(error.to_string(), "Query returned no rows");
@@ -257,7 +251,7 @@ mod tests {
         actions.checkout(command.clone())?;
 
         // Assert
-        let branch = Store::get(&command.name, &repo, &context.connection)?;
+        let branch = context.store.get(&command.name, &repo)?;
         let name = format!(
             "{}-{}",
             &git_commands.repo.unwrap(),
@@ -294,7 +288,7 @@ mod tests {
         actions.current(command.clone())?;
 
         // Assert
-        let branch = Store::get(&branch_name, &repo, &context.connection)?;
+        let branch = context.store.get(&branch_name, &repo)?;
         let name = format!(
             "{}-{}",
             &git_commands.repo.unwrap(),
@@ -316,11 +310,9 @@ mod tests {
         Ok(dirs)
     }
 
-    fn fake_context<C: GitCommands>(commands: C) -> anyhow::Result<AppContext<C>> {
-        let conn = Connection::open_in_memory()?;
-
+    fn fake_context<C: GitCommands>(commands: C) -> anyhow::Result<AppContext<C, Sqlite>> {
         let context = AppContext {
-            connection: conn,
+            store: Sqlite::new(Connection::open_in_memory()?)?,
             project_dir: fake_project_dir()?,
             commands,
         };

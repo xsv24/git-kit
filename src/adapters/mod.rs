@@ -1,4 +1,4 @@
 mod git;
-pub mod store;
+pub mod sqlite;
 
 pub use git::Git;

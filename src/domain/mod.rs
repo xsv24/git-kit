@@ -1,4 +1,6 @@
-mod checkout;
+mod branch;
 pub mod commands;
+pub mod store;
 
-pub use checkout::Checkout;
+pub use branch::Branch;
+pub use store::Store;
