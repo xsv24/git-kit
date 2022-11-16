@@ -47,7 +47,7 @@ fn copy_or_replace(source_path: &PathBuf, target_path: &PathBuf) -> io::Result<(
             }
         }
         Err(_) => {
-            fs::copy(&source_path, &target_path)?;
+            fs::copy(source_path, target_path)?;
         }
     }
 
