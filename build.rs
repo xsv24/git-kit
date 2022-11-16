@@ -13,6 +13,10 @@ fn main() {
         let config_dir = dirs.config_dir();
 
         println!("Updating config file...");
+
+        // Create config dir if not exists.
+        fs::create_dir(config_dir).ok();
+
         copy_or_replace(
             &project_root.join(".git-kit.yml"),
             &config_dir.join(".git-kit.yml"),
@@ -33,6 +37,13 @@ fn copy_or_replace(source_path: &PathBuf, target_path: &PathBuf) -> io::Result<(
             }
         }
         Err(_) => {
+            println!(
+                "copying from: {} {}, to: {} {}",
+                &source_path.exists(),
+                &source_path.display(),
+                &target_path.exists(),
+                &target_path.display()
+            );
             fs::copy(source_path, target_path)?;
         }
     }
