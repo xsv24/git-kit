@@ -109,9 +109,7 @@ mod tests {
     };
 
     use super::*;
-    use directories::ProjectDirs;
     use fake::{Fake, Faker};
-    use uuid::Uuid;
 
     #[test]
     fn insert_or_update_creates_a_new_item_if_not_exists() -> anyhow::Result<()> {
@@ -280,13 +278,6 @@ mod tests {
         let ticket: Option<String> = Faker.fake();
 
         Ok(Branch::new(&name, &repo, ticket)?)
-    }
-
-    fn fake_project_dir() -> anyhow::Result<ProjectDirs> {
-        let dirs = ProjectDirs::from(&format!("{}", Uuid::new_v4()), "xsv24", "git-kit")
-            .context("Failed to retrieve 'git-kit' config")?;
-
-        Ok(dirs)
     }
 
     fn select_branch_row(

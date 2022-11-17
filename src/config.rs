@@ -6,9 +6,7 @@ use std::{
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    utils::{expected_path, get_file_contents},
-};
+use crate::utils::{expected_path, get_file_contents};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Config {

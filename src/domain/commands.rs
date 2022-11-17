@@ -53,48 +53,45 @@ impl<'a, C: GitCommands, S: Store> CommandActions<'a, C, S> {
 }
 
 impl<'a, C: GitCommands, S: Store> Commands<C> for CommandActions<'a, C, S> {
-    fn current(&self, context: context::Arguments) -> anyhow::Result<Branch> {
+    fn current(&self, args: context::Arguments) -> anyhow::Result<Branch> {
         // We want to store the branch name against and ticket number
         // So whenever we commit we get the ticket number from the branch
         let repo_name = self.context.commands.get_repo_name()?;
         let branch_name = self.context.commands.get_branch_name()?;
 
-        let branch = Branch::new(&branch_name, &repo_name, Some(context.ticket))?;
+        let branch = Branch::new(&branch_name, &repo_name, Some(args.ticket))?;
         self.context.store.insert_or_update(&branch)?;
 
         Ok(branch)
     }
 
-    fn checkout(&self, checkout: checkout::Arguments) -> anyhow::Result<Branch> {
+    fn checkout(&self, args: checkout::Arguments) -> anyhow::Result<Branch> {
         // Attempt to create branch
         let create = self
             .context
             .commands
-            .checkout(&checkout.name, CheckoutStatus::New);
+            .checkout(&args.name, CheckoutStatus::New);
 
         // If the branch already exists check it out
         if create.is_err() {
             self.context
                 .commands
-                .checkout(&checkout.name, CheckoutStatus::Existing)?;
+                .checkout(&args.name, CheckoutStatus::Existing)?;
         }
 
         // We want to store the branch name against and ticket number
         // So whenever we commit we get the ticket number from the branch
         let repo_name = self.context.commands.get_repo_name()?;
-        let branch = Branch::new(&checkout.name, &repo_name, checkout.ticket.clone())?;
+        let branch = Branch::new(&args.name, &repo_name, args.ticket.clone())?;
         self.context.store.insert_or_update(&branch)?;
 
         Ok(branch)
     }
 
-    fn commit(&self, arguments: commit::Arguments) -> anyhow::Result<String> {
-        let config = self
-            .context
-            .config
-            .get_template_config(&arguments.template)?;
+    fn commit(&self, args: commit::Arguments) -> anyhow::Result<String> {
+        let config = self.context.config.get_template_config(&args.template)?;
 
-        let contents = arguments.commit_message(config.content.clone(), self.context)?;
+        let contents = args.commit_message(config.content.clone(), self.context)?;
 
         self.context.commands.commit(&contents)?;
 
@@ -107,11 +104,8 @@ mod tests {
     use std::collections::HashMap;
 
     use anyhow::anyhow;
-    use anyhow::Context as anyhow_context;
-    use directories::ProjectDirs;
     use fake::{Fake, Faker};
     use rusqlite::Connection;
-    use uuid::Uuid;
 
     use crate::adapters::sqlite::Sqlite;
     use crate::app_context::AppContext;
@@ -415,13 +409,6 @@ mod tests {
         }
 
         Ok(())
-    }
-
-    fn fake_project_dir() -> anyhow::Result<ProjectDirs> {
-        let dirs = ProjectDirs::from(&format!("{}", Uuid::new_v4()), "xsv24", "git-kit")
-            .context("Failed to retrieve 'git-kit' config")?;
-
-        Ok(dirs)
     }
 
     fn fake_config() -> Config {

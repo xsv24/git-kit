@@ -1,6 +1,6 @@
 use crate::{
     config::Config,
-    domain::{commands::GitCommands, Store}
+    domain::{commands::GitCommands, Store},
 };
 
 pub struct AppContext<C: GitCommands, S: Store> {
