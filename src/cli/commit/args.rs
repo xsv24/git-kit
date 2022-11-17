@@ -54,10 +54,7 @@ impl Arguments {
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        collections::HashMap,
-        path::{Path, PathBuf},
-    };
+    use std::{collections::HashMap, path::PathBuf};
 
     use crate::{
         adapters::sqlite::Sqlite,
@@ -67,12 +64,8 @@ mod tests {
             Branch,
         },
     };
-    use anyhow::Context;
-    use directories::ProjectDirs;
     use fake::{Fake, Faker};
     use rusqlite::Connection;
-    use std::fs;
-    use uuid::Uuid;
 
     use super::*;
 
@@ -130,7 +123,7 @@ mod tests {
         let actual = args.commit_message("{ticket_num} {message}".into(), &context)?;
         let expected = format!("{}", args.message.unwrap());
 
-        clean(context)?;
+        context.close()?;
         assert_eq!(actual, expected);
 
         Ok(())
@@ -154,7 +147,7 @@ mod tests {
             let actual = args.commit_message("{ticket_num} {message}".into(), &context)?;
             let expected = format!("{}", args.message.unwrap());
 
-            clean(context)?;
+            context.close()?;
             assert_eq!(actual, expected);
         }
 
@@ -178,7 +171,7 @@ mod tests {
         let actual = args.commit_message("{ticket_num} {message}".into(), &context)?;
         let expected = format!("[{}] {}", args.ticket.unwrap(), args.message.unwrap());
 
-        clean(context)?;
+        context.close()?;
         assert_eq!(actual, expected);
 
         Ok(())
@@ -201,7 +194,7 @@ mod tests {
         let actual = args.commit_message("{ticket_num} {message}".into(), &context)?;
         let expected = format!("[{}] ", args.ticket.unwrap());
 
-        clean(context)?;
+        context.close()?;
         assert_eq!(actual, expected);
 
         Ok(())
@@ -231,7 +224,7 @@ mod tests {
             args.message.unwrap_or_else(|| "".into())
         );
 
-        clean(context)?;
+        context.close()?;
         assert_eq!(actual, expected);
 
         Ok(())
@@ -311,32 +304,6 @@ mod tests {
             dbg!(&template_config);
             assert!(template_config.content.contains(content))
         }
-
-        Ok(())
-    }
-    fn fake_project_dir() -> anyhow::Result<ProjectDirs> {
-        let dirs = ProjectDirs::from(&format!("{}", Uuid::new_v4()), "xsv24", "git-kit")
-            .expect("Failed to retrieve 'git-kit' config");
-
-        Ok(dirs)
-    }
-
-    fn clean<C: GitCommands, S: Store>(context: AppContext<C, S>) -> anyhow::Result<()> {
-        // Some of the directories might not be used so we won't throw it doesn't exist.
-        let _ = [
-            fs::remove_dir_all(context.project_dir.cache_dir())
-                .context("Failed to delete 'cache_dir'"),
-            fs::remove_dir(context.project_dir.config_dir())
-                .context("Failed to delete 'config_dir'"),
-            fs::remove_dir_all(context.project_dir.data_dir())
-                .context("Failed to delete 'data_dir'"),
-            fs::remove_dir_all(context.project_dir.data_local_dir())
-                .context("Failed to delete 'data_local_dir'"),
-        ];
-
-        context
-            .close()
-            .context("Failed to close sqlite connection")?;
 
         Ok(())
     }
