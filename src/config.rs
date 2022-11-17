@@ -6,7 +6,9 @@ use std::{
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
-use crate::{domain::commands::GitCommands, utils::get_file_contents};
+use crate::{
+    utils::{expected_path, get_file_contents},
+};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Config {
@@ -25,9 +27,12 @@ pub struct TemplateConfig {
 }
 
 impl Config {
-    pub fn new<C: GitCommands>(config_path: &Path, git: &dyn GitCommands) -> anyhow::Result<Self> {
-        let current_repo_root = format!("{}/.git-kit.yml", git.root_directory()?);
-        let config_path = Self::get_config_path(&current_repo_root, config_path)?;
+    pub fn new(
+        user_config_path: Option<String>,
+        git_root_path: PathBuf,
+        default_path: &Path,
+    ) -> anyhow::Result<Self> {
+        let config_path = Self::get_config_path(user_config_path, git_root_path, default_path)?;
 
         let config_contents = get_file_contents(&config_path)?;
         let config = serde_yaml::from_str::<Config>(&config_contents)
@@ -59,20 +64,34 @@ impl Config {
         Ok(template)
     }
 
-    fn get_config_path<'a>(
-        current_repo_root: &'a str,
-        config_path: &'a Path,
+    fn get_config_path(
+        user_config: Option<String>,
+        repo_config: PathBuf,
+        default_path: &Path,
     ) -> anyhow::Result<PathBuf> {
-        let repo_config = Path::new(current_repo_root);
+        let filename = ".git-kit.yml";
+        let repo_config = repo_config.join(filename);
+        let default_path = default_path.join(filename);
 
-        let config_path = if repo_config.exists() {
-            // TODO: logging -> println!("⏳ Loading from current local repo...");
-            repo_config.to_owned()
-        } else {
-            // TODO: logging -> println!("⏳ Loading from global config...");
-            config_path.join(".git-kit.yml")
-        };
+        match (user_config, repo_config) {
+            (Some(user), _) => {
+                println!("⏳ Loading user config...");
 
-        Ok(config_path)
+                expected_path(&user).map_err(|_| {
+                    anyhow::anyhow!(format!(
+                        "Invalid config file path does not exist at '{}'",
+                        &user
+                    ))
+                })
+            }
+            (None, repo) if repo.exists() => {
+                println!("⏳ Loading local repo config...");
+                Ok(repo)
+            }
+            (_, _) => {
+                println!("⏳ Loading global config...");
+                Ok(default_path)
+            }
+        }
     }
 }

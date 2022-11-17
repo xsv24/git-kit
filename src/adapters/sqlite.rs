@@ -202,7 +202,6 @@ mod tests {
 
         let context = AppContext {
             store,
-            project_dir: fake_project_dir()?,
             commands: Git,
             config: fake_config(),
         };
@@ -238,7 +237,6 @@ mod tests {
         // Arrange
         let context = AppContext {
             store: Sqlite::new(setup_db()?)?,
-            project_dir: fake_project_dir()?,
             commands: Git,
             config: fake_config(),
         };

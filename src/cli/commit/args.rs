@@ -54,7 +54,10 @@ impl Arguments {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::{
+        collections::HashMap,
+        path::{Path, PathBuf},
+    };
 
     use crate::{
         adapters::sqlite::Sqlite,
@@ -105,7 +108,7 @@ mod tests {
             todo!()
         }
 
-        fn root_directory(&self) -> anyhow::Result<String> {
+        fn root_directory(&self) -> anyhow::Result<PathBuf> {
             todo!()
         }
     }
@@ -114,7 +117,6 @@ mod tests {
     fn empty_ticket_num_removes_square_brackets() -> anyhow::Result<()> {
         let context = AppContext {
             store: Sqlite::new(setup_db(None)?)?,
-            project_dir: fake_project_dir()?,
             commands: TestCommand::fake(),
             config: fake_config(),
         };
@@ -139,7 +141,6 @@ mod tests {
         for ticket in [Some("".into()), Some("   ".into()), None] {
             let context = AppContext {
                 store: Sqlite::new(setup_db(None)?)?,
-                project_dir: fake_project_dir()?,
                 commands: TestCommand::fake(),
                 config: fake_config(),
             };
@@ -164,7 +165,6 @@ mod tests {
     fn commit_message_with_both_args_are_populated() -> anyhow::Result<()> {
         let context = AppContext {
             store: Sqlite::new(setup_db(None)?)?,
-            project_dir: fake_project_dir()?,
             commands: TestCommand::fake(),
             config: fake_config(),
         };
@@ -188,7 +188,6 @@ mod tests {
     fn commit_template_message_is_replaced_with_empty_str() -> anyhow::Result<()> {
         let context = AppContext {
             store: Sqlite::new(setup_db(None)?)?,
-            project_dir: fake_project_dir()?,
             commands: TestCommand::fake(),
             config: fake_config(),
         };
@@ -217,7 +216,6 @@ mod tests {
         let context = AppContext {
             store: Sqlite::new(setup_db(Some(&branch))?)?,
             commands: commands.clone(),
-            project_dir: fake_project_dir()?,
             config: fake_config(),
         };
 

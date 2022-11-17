@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::{
     app_context::AppContext,
     cli::{checkout, commit, context},
@@ -14,7 +16,7 @@ pub enum CheckoutStatus {
 /// Used to abstract cli git commands for testings.
 pub trait GitCommands {
     /// Get the root directory of the current git repo.
-    fn root_directory(&self) -> anyhow::Result<String>;
+    fn root_directory(&self) -> anyhow::Result<PathBuf>;
 
     /// Get the current git repository name.
     fn get_repo_name(&self) -> anyhow::Result<String>;
@@ -31,13 +33,13 @@ pub trait GitCommands {
 
 pub trait Commands<C: GitCommands> {
     /// Actions on a context update on the current branch.
-    fn current(&self, context: context::Arguments) -> anyhow::Result<Branch>;
+    fn current(&self, args: context::Arguments) -> anyhow::Result<Branch>;
 
     /// Actions on a checkout of a new or existing branch.
     fn checkout(&self, args: checkout::Arguments) -> anyhow::Result<Branch>;
 
     /// Actions on a commit.
-    fn commit(&self, template: commit::Arguments) -> anyhow::Result<String>;
+    fn commit(&self, args: commit::Arguments) -> anyhow::Result<String>;
 }
 
 pub struct CommandActions<'a, C: GitCommands, S: Store> {
@@ -433,7 +435,6 @@ mod tests {
     fn fake_context<'a, C: GitCommands>(commands: C) -> anyhow::Result<AppContext<C, Sqlite>> {
         let context = AppContext {
             store: Sqlite::new(Connection::open_in_memory()?)?,
-            project_dir: fake_project_dir()?,
             config: fake_config(),
             commands,
         };
@@ -488,11 +489,10 @@ mod tests {
         }
 
         fn commit(&self, msg: &str) -> anyhow::Result<()> {
-            // assert_eq!(self.expected_commit_msg.clone().expect("commit call was not expected!"), msg);
             (self.commit_res)(msg)
         }
 
-        fn root_directory(&self) -> anyhow::Result<String> {
+        fn root_directory(&self) -> anyhow::Result<PathBuf> {
             todo!()
         }
     }
