@@ -73,8 +73,6 @@ impl Config {
 
         match (user_config, repo_config) {
             (Some(user), _) => {
-                println!("⏳ Loading user config...");
-
                 expected_path(&user).map_err(|_| {
                     anyhow::anyhow!(format!(
                         "Invalid config file path does not exist at '{}'",
@@ -83,11 +81,9 @@ impl Config {
                 })
             }
             (None, repo) if repo.exists() => {
-                println!("⏳ Loading local repo config...");
                 Ok(repo)
             }
             (_, _) => {
-                println!("⏳ Loading global config...");
                 Ok(default_path)
             }
         }
