@@ -25,7 +25,7 @@ impl Arguments {
         let message = match replace {
             Some(value) => {
                 log::info!("replace '{}' from template with '{}'", target, value);
-                message.replace(&template, &value)
+                message.replace(&template, value)
             }
             None => {
                 log::info!("removing '{}' from template", target);
