@@ -126,7 +126,7 @@ mod tests {
     }
 
     #[test]
-    fn user_config_file_used_over_repo_and_default() {
+    fn user_config_file_used_over_repo_and_default() -> anyhow::Result<()> {
         let git: &dyn GitCommands = &Git;
 
         let user_config = Path::new(".").to_owned();
@@ -138,10 +138,12 @@ mod tests {
         )?;
 
         assert_eq!(config_dir, user_config);
+
+        Ok(())
     }
 
     #[test]
-    fn invalid_path_for_user_config_file_errors() {
+    fn invalid_path_for_user_config_file_errors() -> anyhow::Result<()> {
         let git: &dyn GitCommands = &Git;
 
         let user_config = Path::new(&Faker.fake::<String>()).to_owned();
@@ -160,5 +162,7 @@ mod tests {
                 user_config.display()
             )
         );
+
+        Ok(())
     }
 }
