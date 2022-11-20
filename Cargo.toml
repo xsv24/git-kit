@@ -1,6 +1,6 @@
 [package]
 name = "git-kit"
-version = "0.0.9-pre1"
+version = "0.0.10"
 edition = "2021"
 authors = ["Thomas Pearson thomaspearson.dev@gmail.com"]
 license = "MIT"
