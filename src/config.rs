@@ -93,3 +93,82 @@ impl Config {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use directories::ProjectDirs;
+    use fake::{Fake, Faker};
+    use uuid::Uuid;
+
+    use crate::{adapters::Git, domain::commands::GitCommands};
+
+    use super::*;
+
+    fn fake_project_dir() -> PathBuf {
+        let dir = ProjectDirs::from("test", "xsv24", &format!("{}", Uuid::new_v4()))
+            .expect("Failed to retrieve 'git-kit' config");
+
+        dir.config_dir().to_owned()
+    }
+
+    #[test]
+    fn no_user_path_or_valid_repo_dir_defaults() -> anyhow::Result<()> {
+        let default_path = fake_project_dir();
+
+        let repo_non_existing = Path::new(&Faker.fake::<String>()).to_owned();
+
+        let config_dir = Config::get_config_path(None, repo_non_existing, &default_path)?;
+
+        assert_eq!(config_dir, default_path.join(".git-kit.yml"));
+        Ok(())
+    }
+
+    #[test]
+    fn repo_dir_with_config_file_used_over_default() -> anyhow::Result<()> {
+        let git: &dyn GitCommands = &Git;
+        let repo_root_with_config = git.root_directory()?;
+
+        let config_dir =
+            Config::get_config_path(None, repo_root_with_config.clone(), &fake_project_dir())?;
+
+        assert_eq!(config_dir, repo_root_with_config.join(".git-kit.yml"));
+        Ok(())
+    }
+
+    #[test]
+    fn user_config_file_used_over_repo_and_default() {
+        let git: &dyn GitCommands = &Git;
+
+        let user_config = Path::new(".").to_owned();
+
+        let config_dir = Config::get_config_path(
+            Some(user_config.to_str().unwrap().to_string()),
+            git.root_directory()?,
+            &fake_project_dir(),
+        )?;
+
+        assert_eq!(config_dir, user_config);
+    }
+
+    #[test]
+    fn invalid_path_for_user_config_file_errors() {
+        let git: &dyn GitCommands = &Git;
+
+        let user_config = Path::new(&Faker.fake::<String>()).to_owned();
+
+        let error = Config::get_config_path(
+            Some(user_config.to_str().unwrap().to_string()),
+            git.root_directory()?,
+            &fake_project_dir(),
+        )
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            format!(
+                "Invalid config file path does not exist at '{}'",
+                user_config.display()
+            )
+        );
+    }
+}

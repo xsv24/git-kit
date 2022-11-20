@@ -299,9 +299,7 @@ mod tests {
         let config = fake_config();
 
         for (content, arguments) in get_arguments(None) {
-            dbg!(&content, &arguments);
             let template_config = config.get_template_config(&arguments.template)?;
-            dbg!(&template_config);
             assert!(template_config.content.contains(content))
         }
 
