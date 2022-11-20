@@ -72,20 +72,14 @@ impl Config {
         let default_path = default_path.join(filename);
 
         match (user_config, repo_config) {
-            (Some(user), _) => {
-                expected_path(&user).map_err(|_| {
-                    anyhow::anyhow!(format!(
-                        "Invalid config file path does not exist at '{}'",
-                        &user
-                    ))
-                })
-            }
-            (None, repo) if repo.exists() => {
-                Ok(repo)
-            }
-            (_, _) => {
-                Ok(default_path)
-            }
+            (Some(user), _) => expected_path(&user).map_err(|_| {
+                anyhow::anyhow!(format!(
+                    "Invalid config file path does not exist at '{}'",
+                    &user
+                ))
+            }),
+            (None, repo) if repo.exists() => Ok(repo),
+            (_, _) => Ok(default_path),
         }
     }
 }
