@@ -21,6 +21,7 @@ impl Arguments {
         template: String,
         context: &AppContext<C, S>,
     ) -> anyhow::Result<String> {
+        log::info!("generate commit message for '{}'", template);
         let ticket = self.ticket.as_ref().map(|num| num.trim());
 
         let ticket_num = match ticket {
