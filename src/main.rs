@@ -7,28 +7,17 @@ pub mod utils;
 
 use std::fmt::Debug;
 
-use cli::{checkout, commit, context, templates};
+use cli::{checkout, commit, context, log::LogLevel, templates};
 use domain::commands::{CommandActions, GitCommands};
 
 use adapters::{sqlite::Sqlite, Git};
 use anyhow::{Context, Ok};
 use app_context::AppContext;
-use clap::{clap_derive::ArgEnum, Args, Parser, Subcommand};
+use clap::{Parser, Subcommand};
 use directories::ProjectDirs;
-use log::LevelFilter;
 use rusqlite::Connection;
 
 use crate::config::Config;
-
-#[derive(Clone, Debug, ArgEnum, Default)]
-pub enum LogLevel {
-    #[default]
-    None,
-    Debug,
-    Info,
-    Warn,
-    Error,
-}
 
 #[derive(Debug, Parser)]
 #[clap(name = "git-kit")]
@@ -63,7 +52,7 @@ pub enum Commands {
 
 impl Cli {
     fn init(&self) -> anyhow::Result<AppContext<Git, Sqlite>> {
-        log::set_max_level(log::LevelFilter::Debug);
+        self.log.init_logger();
 
         let project_dir = ProjectDirs::from("dev", "xsv24", "git-kit")
             .context("Failed to retrieve 'git-kit' config")?;
@@ -90,16 +79,6 @@ impl Cli {
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
-
-    let log = match cli.log {
-        LogLevel::Debug => LevelFilter::Debug,
-        LogLevel::Info => LevelFilter::Info,
-        LogLevel::Warn => LevelFilter::Warn,
-        LogLevel::Error => LevelFilter::Error,
-        LogLevel::None => LevelFilter::Off,
-    };
-
-    env_logger::Builder::new().filter_level(log).init();
 
     let context = cli.init()?;
     let actions = CommandActions::new(&context);
