@@ -1,5 +1,6 @@
 use crate::{
-    app_context::AppContext, domain::commands::GitCommands, domain::store::Store,
+    app_context::AppContext,
+    domain::adapters::{Git, Store},
     utils::string::into_option,
 };
 use clap::Args;
@@ -73,10 +74,7 @@ mod tests {
     use crate::{
         adapters::sqlite::Sqlite,
         config::{CommitConfig, Config, TemplateConfig},
-        domain::{
-            commands::{CheckoutStatus, GitCommands},
-            Branch,
-        },
+        domain::{adapters::CheckoutStatus, models::Branch},
     };
     use fake::{Fake, Faker};
     use rusqlite::Connection;

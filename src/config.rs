@@ -103,7 +103,7 @@ mod tests {
     use fake::{Fake, Faker};
     use uuid::Uuid;
 
-    use crate::{adapters::Git, domain::commands::GitCommands};
+    use crate::{adapters::Git, domain::adapters};
 
     use super::*;
 
