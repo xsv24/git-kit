@@ -1,4 +1,4 @@
-use crate::domain::{adapters::Git, commands::Commands};
+use crate::domain::commands::Commands;
 
 use super::Arguments;
 

@@ -1,5 +1,5 @@
 pub mod actions;
 mod commands;
 
-pub use actions::CommandActions;
+pub use actions::Actions;
 pub use commands::Commands;

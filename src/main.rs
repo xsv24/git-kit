@@ -14,7 +14,7 @@ use anyhow::{Context, Ok};
 use app_context::AppContext;
 use clap::{Parser, Subcommand};
 use directories::ProjectDirs;
-use domain::{adapters::Git as _, commands::CommandActions};
+use domain::{adapters::Git as _, commands::Actions};
 use rusqlite::Connection;
 
 use crate::config::Config;
@@ -81,7 +81,7 @@ fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     let context = cli.init()?;
-    let actions = CommandActions::new(&context);
+    let actions = Actions::new(&context);
 
     let result = match cli.commands {
         Commands::Checkout(args) => checkout::handler(&actions, args),

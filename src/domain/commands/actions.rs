@@ -9,17 +9,17 @@ use crate::{
 
 use super::Commands;
 
-pub struct CommandActions<'a, C: Git, S: Store> {
+pub struct Actions<'a, C: Git, S: Store> {
     context: &'a AppContext<C, S>,
 }
 
-impl<'a, C: Git, S: Store> CommandActions<'a, C, S> {
-    pub fn new(context: &AppContext<C, S>) -> CommandActions<C, S> {
-        CommandActions { context }
+impl<'a, C: Git, S: Store> Actions<'a, C, S> {
+    pub fn new(context: &AppContext<C, S>) -> Actions<C, S> {
+        Actions { context }
     }
 }
 
-impl<'a, C: Git, S: Store> Commands for CommandActions<'a, C, S> {
+impl<'a, C: Git, S: Store> Commands for Actions<'a, C, S> {
     fn current(&self, args: context::Arguments) -> anyhow::Result<Branch> {
         // We want to store the branch name against and ticket number
         // So whenever we commit we get the ticket number from the branch
@@ -100,7 +100,7 @@ mod tests {
         };
 
         let context = fake_context(git_commands.clone())?;
-        let actions = CommandActions::new(&context);
+        let actions = Actions::new(&context);
 
         // Act
         actions.checkout(command.clone())?;
@@ -145,7 +145,7 @@ mod tests {
         };
 
         let context = fake_context(git_commands.clone())?;
-        let actions = CommandActions::new(&context);
+        let actions = Actions::new(&context);
 
         // Act
         actions.checkout(command.clone())?;
@@ -183,7 +183,7 @@ mod tests {
         };
 
         let context = fake_context(git_commands.clone())?;
-        let actions = CommandActions::new(&context);
+        let actions = Actions::new(&context);
 
         // Act
         let result = actions.checkout(command.clone());
@@ -220,7 +220,7 @@ mod tests {
         };
 
         let context = fake_context(git_commands.clone())?;
-        let actions = CommandActions::new(&context);
+        let actions = Actions::new(&context);
 
         // Act
         actions.checkout(command.clone())?;
@@ -257,7 +257,7 @@ mod tests {
         };
 
         let context = fake_context(git_commands.clone())?;
-        let actions = CommandActions::new(&context);
+        let actions = Actions::new(&context);
 
         // Act
         actions.current(command.clone())?;
@@ -288,7 +288,7 @@ mod tests {
 
         for (template_contents, args) in fake_commit_args(Some(args)) {
             let context = fake_context(GitCommandMock::fake())?;
-            let actions = CommandActions::new(&context);
+            let actions = Actions::new(&context);
 
             // Act
             let contents = actions
@@ -319,7 +319,7 @@ mod tests {
 
         for (template_contents, args) in fake_commit_args(Some(args)) {
             let context = fake_context(GitCommandMock::fake())?;
-            let actions = CommandActions::new(&context);
+            let actions = Actions::new(&context);
 
             // Act
             let contents = actions
@@ -349,7 +349,7 @@ mod tests {
 
         for (template_contents, args) in fake_commit_args(Some(args)) {
             let context = fake_context(GitCommandMock::fake())?;
-            let actions = CommandActions::new(&context);
+            let actions = Actions::new(&context);
 
             let branch_name = context.git.get_branch_name()?;
             let repo_name = context.git.get_repo_name()?;
