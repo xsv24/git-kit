@@ -8,13 +8,13 @@ pub mod utils;
 use std::fmt::Debug;
 
 use cli::{checkout, commit, context, log::LogLevel, templates};
-use domain::commands::{CommandActions, GitCommands};
 
 use adapters::{sqlite::Sqlite, Git};
 use anyhow::{Context, Ok};
 use app_context::AppContext;
 use clap::{Parser, Subcommand};
 use directories::ProjectDirs;
+use domain::{adapters::Git as _, commands::CommandActions};
 use rusqlite::Connection;
 
 use crate::config::Config;

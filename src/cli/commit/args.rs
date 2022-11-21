@@ -36,7 +36,7 @@ impl Arguments {
         message.trim().into()
     }
 
-    pub fn commit_message<C: GitCommands, S: Store>(
+    pub fn commit_message<C: Git, S: Store>(
         &self,
         template: String,
         context: &AppContext<C, S>,
@@ -49,8 +49,8 @@ impl Arguments {
             None => context
                 .store
                 .get(
-                    &context.commands.get_branch_name()?,
-                    &context.commands.get_repo_name()?,
+                    &context.git.get_branch_name()?,
+                    &context.git.get_repo_name()?,
                 )
                 .map_or(None, |branch| Some(branch.ticket)),
         };
@@ -98,7 +98,7 @@ mod tests {
         }
     }
 
-    impl GitCommands for TestCommand {
+    impl Git for TestCommand {
         fn get_repo_name(&self) -> anyhow::Result<String> {
             Ok(self.repo.to_owned())
         }
@@ -124,7 +124,7 @@ mod tests {
     fn empty_ticket_num_removes_square_brackets() -> anyhow::Result<()> {
         let context = AppContext {
             store: Sqlite::new(setup_db(None)?)?,
-            commands: TestCommand::fake(),
+            git: TestCommand::fake(),
             config: fake_config(),
         };
 
@@ -148,7 +148,7 @@ mod tests {
         for ticket in [Some("".into()), Some("   ".into()), None] {
             let context = AppContext {
                 store: Sqlite::new(setup_db(None)?)?,
-                commands: TestCommand::fake(),
+                git: TestCommand::fake(),
                 config: fake_config(),
             };
 
@@ -172,7 +172,7 @@ mod tests {
     fn commit_message_with_both_args_are_populated() -> anyhow::Result<()> {
         let context = AppContext {
             store: Sqlite::new(setup_db(None)?)?,
-            commands: TestCommand::fake(),
+            git: TestCommand::fake(),
             config: fake_config(),
         };
 
@@ -195,7 +195,7 @@ mod tests {
     fn commit_template_message_is_replaced_with_empty_str() -> anyhow::Result<()> {
         let context = AppContext {
             store: Sqlite::new(setup_db(None)?)?,
-            commands: TestCommand::fake(),
+            git: TestCommand::fake(),
             config: fake_config(),
         };
 
@@ -222,7 +222,7 @@ mod tests {
 
         let context = AppContext {
             store: Sqlite::new(setup_db(Some(&branch))?)?,
-            commands: commands.clone(),
+            git: commands.clone(),
             config: fake_config(),
         };
 
