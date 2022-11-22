@@ -1,8 +1,8 @@
-use crate::domain::commands::Commands;
+use crate::domain::commands::Actor;
 
 use super::Arguments;
 
-pub fn handler(actions: &dyn Commands, args: Arguments) -> anyhow::Result<()> {
+pub fn handler(actions: &dyn Actor, args: Arguments) -> anyhow::Result<()> {
     actions.current(args)?;
     Ok(())
 }

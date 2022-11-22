@@ -7,7 +7,7 @@ use crate::{
     },
 };
 
-use super::Commands;
+use super::Actor;
 
 pub struct Actions<'a, C: Git, S: Store> {
     context: &'a AppContext<C, S>,
@@ -19,7 +19,7 @@ impl<'a, C: Git, S: Store> Actions<'a, C, S> {
     }
 }
 
-impl<'a, C: Git, S: Store> Commands for Actions<'a, C, S> {
+impl<'a, C: Git, S: Store> Actor for Actions<'a, C, S> {
     fn current(&self, args: context::Arguments) -> anyhow::Result<Branch> {
         // We want to store the branch name against and ticket number
         // So whenever we commit we get the ticket number from the branch

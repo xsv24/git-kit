@@ -1,5 +1,5 @@
 pub mod actions;
-mod commands;
+mod actor;
 
 pub use actions::Actions;
-pub use commands::Commands;
+pub use actor::Actor;

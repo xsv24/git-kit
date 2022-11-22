@@ -3,7 +3,7 @@ use crate::{
     domain::models::Branch,
 };
 
-pub trait Commands {
+pub trait Actor {
     /// Actions on a context update on the current branch.
     fn current(&self, args: context::Arguments) -> anyhow::Result<Branch>;
 
