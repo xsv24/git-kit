@@ -33,3 +33,5 @@ fake = { version = "2.5.0" }
 
 [build-dependencies]
 directories = { version = "4.0.1" }
+rusqlite = { version = "0.28.0", features = ["bundled"] }
+rusqlite_migration = "1.0.1"
