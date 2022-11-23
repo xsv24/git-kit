@@ -49,7 +49,7 @@ impl Arguments {
             Some(num) => into_option(num),
             None => context
                 .store
-                .get(
+                .get_branch(
                     &context.git.get_branch_name()?,
                     &context.git.get_repo_name()?,
                 )

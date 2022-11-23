@@ -2,7 +2,10 @@ use anyhow::{anyhow, Context};
 use chrono::{DateTime, Utc};
 use rusqlite::{types::Type, Connection, Row};
 
-use crate::domain::{self, models::Branch};
+use crate::domain::{
+    self,
+    models::{Branch, Config},
+};
 
 pub struct Sqlite {
     connection: Connection,
@@ -23,7 +26,7 @@ impl Sqlite {
 }
 
 impl domain::adapters::Store for Sqlite {
-    fn insert_or_update(&self, branch: &Branch) -> anyhow::Result<()> {
+    fn persist_branch(&self, branch: &Branch) -> anyhow::Result<()> {
         log::info!(
             "insert or update for '{}' branch with ticket '{}'",
             branch.name,
@@ -40,12 +43,12 @@ impl domain::adapters::Store for Sqlite {
                     &branch.created.to_rfc3339(),
                 ),
             )
-            .with_context(|| format!("Failed to insert branch '{}'", &branch.name))?;
+            .with_context(|| format!("Failed to update branch '{}'", &branch.name))?;
 
         Ok(())
     }
 
-    fn get(&self, branch: &str, repo: &str) -> anyhow::Result<Branch> {
+    fn get_branch(&self, branch: &str, repo: &str) -> anyhow::Result<Branch> {
         let name = format!("{}-{}", repo.trim(), branch.trim());
 
         log::info!(
@@ -81,7 +84,7 @@ impl<'a> TryFrom<&Row<'a>> for Branch {
         let date = value.get::<usize, String>(3)?;
         let created = DateTime::parse_from_rfc3339(&date)
             .map_err(|e| {
-                dbg!("{}", e);
+                log::error!("Corrupted data failed to convert to datetime, {}", e);
                 rusqlite::Error::InvalidColumnType(
                     0,
                     "Failed to convert string to DateTime".into(),
@@ -103,27 +106,28 @@ impl<'a> TryFrom<&Row<'a>> for Branch {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::{collections::HashMap, path::{PathBuf, Path}};
 
     use crate::{
         adapters::Git,
         app_context::AppContext,
-        config::{CommitConfig, Config},
+        config::{AppConfig, CommitConfig},
         domain::adapters::Store,
     };
 
     use super::*;
     use fake::{Fake, Faker};
+    use migrations::db_migrations;
 
     #[test]
-    fn insert_or_update_creates_a_new_item_if_not_exists() -> anyhow::Result<()> {
+    fn update_branch_creates_a_new_item_if_not_exists() -> anyhow::Result<()> {
         // Arrange
         let branch = fake_branch(None, None)?;
         let connection = setup_db()?;
         let store = Sqlite::new(connection)?;
 
         // Act
-        store.insert_or_update(&branch)?;
+        store.persist_branch(&branch)?;
 
         // Assert
         assert_eq!(branch_count(&store.connection)?, 1);
@@ -161,7 +165,7 @@ mod tests {
         };
 
         // Act
-        store.insert_or_update(&updated_branch)?;
+        store.persist_branch(&updated_branch)?;
 
         // Assert
         assert_eq!(branch_count(&store.connection)?, 1);
@@ -219,7 +223,7 @@ mod tests {
             .with_context(|| "Expected to find a matching branch")?;
 
         // Act
-        let branch = context.store.get(&random_key, &repo)?;
+        let branch = context.store.get_branch(&random_key, &repo)?;
 
         context.close()?;
         // Assert
@@ -259,7 +263,7 @@ mod tests {
         )?;
 
         // Act
-        let actual = context.store.get(&format!(" {}\n", name), &repo)?;
+        let actual = context.store.get_branch(&format!(" {}\n", name), &repo)?;
 
         context.close()?;
         // Assert

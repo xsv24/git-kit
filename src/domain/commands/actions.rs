@@ -27,7 +27,7 @@ impl<'a, C: Git, S: Store> Actor for Actions<'a, C, S> {
         let branch_name = self.context.git.get_branch_name()?;
 
         let branch = Branch::new(&branch_name, &repo_name, Some(args.ticket))?;
-        self.context.store.insert_or_update(&branch)?;
+        self.context.store.persist_branch(&branch)?;
 
         Ok(branch)
     }
@@ -49,7 +49,7 @@ impl<'a, C: Git, S: Store> Actor for Actions<'a, C, S> {
         // So whenever we commit we get the ticket number from the branch
         let repo_name = self.context.git.get_repo_name()?;
         let branch = Branch::new(&args.name, &repo_name, args.ticket.clone())?;
-        self.context.store.insert_or_update(&branch)?;
+        self.context.store.persist_branch(&branch)?;
 
         Ok(branch)
     }
@@ -107,7 +107,7 @@ mod tests {
         actions.checkout(command.clone())?;
 
         // Assert
-        let branch = context.store.get(&command.name, &repo)?;
+        let branch = context.store.get_branch(&command.name, &repo)?;
         let name = format!(
             "{}-{}",
             &git_commands.repo.unwrap(),
@@ -152,7 +152,7 @@ mod tests {
         actions.checkout(command.clone())?;
 
         // Assert
-        let branch = context.store.get(&command.name, &repo)?;
+        let branch = context.store.get_branch(&command.name, &repo)?;
         let name = format!(
             "{}-{}",
             &git_commands.repo.unwrap(),
@@ -194,7 +194,7 @@ mod tests {
 
         let error = context
             .store
-            .get(&command.name, &repo)
+            .get_branch(&command.name, &repo)
             .expect_err("Expected error as there should be no stored branches.");
 
         assert_eq!(error.to_string(), "Query returned no rows");
@@ -227,7 +227,7 @@ mod tests {
         actions.checkout(command.clone())?;
 
         // Assert
-        let branch = context.store.get(&command.name, &repo)?;
+        let branch = context.store.get_branch(&command.name, &repo)?;
         let name = format!(
             "{}-{}",
             &git_commands.repo.unwrap(),
@@ -264,7 +264,7 @@ mod tests {
         actions.current(command.clone())?;
 
         // Assert
-        let branch = context.store.get(&branch_name, &repo)?;
+        let branch = context.store.get_branch(&branch_name, &repo)?;
         let name = format!(
             "{}-{}",
             &git_commands.repo.unwrap(),
@@ -402,7 +402,7 @@ mod tests {
 
     fn setup_db(store: &Sqlite, branch: Option<&Branch>) -> anyhow::Result<()> {
         if let Some(branch) = branch {
-            store.insert_or_update(branch.into())?;
+            store.persist_branch(branch.into())?;
         }
 
         Ok(())
