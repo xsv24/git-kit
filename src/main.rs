@@ -14,10 +14,13 @@ use anyhow::{Context, Ok};
 use app_context::AppContext;
 use clap::{Parser, Subcommand};
 use directories::ProjectDirs;
-use domain::{adapters::Git as _, commands::Actions};
+use domain::{
+    adapters::{Git as _, Store},
+    commands::Actions,
+};
 use rusqlite::Connection;
 
-use crate::config::Config;
+use crate::config::AppConfig;
 
 #[derive(Debug, Parser)]
 #[clap(name = "git-kit")]
@@ -54,22 +57,17 @@ impl Cli {
     fn init(&self) -> anyhow::Result<AppContext<Git, Sqlite>> {
         self.log.init_logger();
 
-        let project_dir = ProjectDirs::from("dev", "xsv24", "git-kit")
-            .context("Failed to retrieve 'git-kit' config")?;
-
-        let connection = Connection::open(project_dir.config_dir().join("db"))
-            .context("Failed to open sqlite connection")?;
-
-        let store = Sqlite::new(connection).context("Failed to initialize 'Sqlite'")?;
+        let store =
+            Sqlite::new(AppConfig::db_connection()?).context("Failed to initialize 'Sqlite'")?;
 
         let git = Git;
+        let config = match &self.config {
+            Some(config) => Some(Path::new(config).to_owned()),
+            None => store.get_config()?.map(|c| c.path),
+        };
 
         // use custom user config if provided or default.
-        let config = Config::new(
-            self.config.clone(),
-            git.root_directory()?,
-            project_dir.config_dir(),
-        )?;
+        let config = AppConfig::new(config.clone(), git.root_directory()?)?;
 
         let context = AppContext::new(git, store, config)?;
 

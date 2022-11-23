@@ -72,12 +72,13 @@ mod tests {
 
     use anyhow::anyhow;
     use fake::{Fake, Faker};
+    use migrations::db_migrations;
     use rusqlite::Connection;
 
     use crate::adapters::sqlite::Sqlite;
     use crate::app_context::AppContext;
+    use crate::config::AppConfig;
     use crate::config::CommitConfig;
-    use crate::config::Config;
     use crate::config::TemplateConfig;
     use crate::domain::adapters::CheckoutStatus;
 
@@ -378,8 +379,8 @@ mod tests {
         Ok(())
     }
 
-    fn fake_config() -> Config {
-        Config {
+    fn fake_config() -> AppConfig {
+        AppConfig {
             commit: CommitConfig {
                 templates: fake_template_config(),
             },

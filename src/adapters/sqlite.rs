@@ -205,7 +205,7 @@ mod tests {
         let context = AppContext {
             store,
             git: Git,
-            config: fake_config(),
+            config: fake_app_config(),
         };
 
         let keys = branches.keys().cloned().collect::<Vec<String>>();
@@ -240,7 +240,7 @@ mod tests {
         let context = AppContext {
             store: Sqlite::new(setup_db()?)?,
             git: Git,
-            config: fake_config(),
+            config: fake_app_config(),
         };
 
         // Insert random collection of branches.
@@ -268,8 +268,8 @@ mod tests {
         Ok(())
     }
 
-    fn fake_config() -> Config {
-        Config {
+    fn fake_app_config() -> AppConfig {
+        AppConfig {
             commit: CommitConfig {
                 templates: HashMap::new(),
             },
