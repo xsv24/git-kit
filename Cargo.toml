@@ -30,8 +30,9 @@ uuid = { version = "1.1.2", features = [ "v4" ] }
 
 [dev-dependencies]
 fake = { version = "2.5.0" }
+migrations = { path = "./migrations" }
 
 [build-dependencies]
 directories = { version = "4.0.1" }
 rusqlite = { version = "0.28.0", features = ["bundled"] }
-rusqlite_migration = "1.0.1"
+migrations = { path = "./migrations" }

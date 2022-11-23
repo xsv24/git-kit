@@ -1,3 +1,0 @@
-CREATE TABLE IF NOT EXISTS config (
-    path TEXT NOT NULL
-);

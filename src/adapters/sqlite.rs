@@ -10,16 +10,6 @@ pub struct Sqlite {
 
 impl Sqlite {
     pub fn new(connection: Connection) -> anyhow::Result<Sqlite> {
-        connection.execute(
-            "CREATE TABLE IF NOT EXISTS branch (
-            name TEXT NOT NULL PRIMARY KEY,
-            ticket TEXT,
-            data BLOB,
-            created TEXT NOT NULL
-        )",
-            (),
-        )?;
-
         Ok(Sqlite { connection })
     }
 
@@ -316,18 +306,8 @@ mod tests {
     }
 
     fn setup_db() -> anyhow::Result<Connection> {
-        let conn = Connection::open_in_memory()?;
-
-        conn.execute(
-            "CREATE TABLE branch (
-                name TEXT NOT NULL PRIMARY KEY,
-                ticket TEXT,
-                data BLOB,
-                created TEXT NOT NULL
-            )",
-            (),
-        )?;
-
+        let mut conn = Connection::open_in_memory()?;
+        db_migrations(&mut conn, None)?;
         Ok(conn)
     }
 }
