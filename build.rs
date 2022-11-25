@@ -4,7 +4,7 @@ use std::{
 };
 
 use directories::ProjectDirs;
-use migrations::db_migrations;
+use migrations::{db_migrations, MigrationContext};
 use rusqlite::Connection;
 
 // Build script to copy over default templates & config into the binary directory.
@@ -28,7 +28,15 @@ fn main() {
         let mut connection =
             Connection::open(config_dir.join("db")).expect("Failed to open sqlite connection");
 
-        db_migrations(&mut connection, None).expect("Failed to apply migrations.");
+        db_migrations(
+            &mut connection,
+            MigrationContext {
+                config_path: config_dir.join(".git-kit.yml"),
+                enable_side_effects: true,
+                version: Some(2),
+            },
+        )
+        .expect("Failed to apply migrations.");
         connection
             .close()
             .expect("Failed to close sqlite connection");
