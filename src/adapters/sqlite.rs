@@ -27,14 +27,6 @@ impl Sqlite {
 
         Ok(transaction)
     }
-
-    pub fn close(self) -> anyhow::Result<()> {
-        self.connection
-            .close()
-            .map_err(|_| anyhow!("Failed to close 'git-kit' connection"))?;
-
-        Ok(())
-    }
 }
 
 impl domain::adapters::Store for Sqlite {
@@ -221,14 +213,15 @@ mod tests {
 
     use crate::{
         adapters::Git,
+        app_config::{AppConfig, CommitConfig},
         app_context::AppContext,
-        config::{AppConfig, CommitConfig},
         domain::adapters::Store,
     };
 
+    use crate::migrations::{db_migrations, MigrationContext};
+
     use super::*;
     use fake::{Fake, Faker};
-    use migrations::db_migrations;
 
     #[test]
     fn persist_branch_creates_a_new_item_if_not_exists() -> anyhow::Result<()> {
@@ -613,7 +606,7 @@ mod tests {
         let mut conn = Connection::open_in_memory()?;
         db_migrations(
             &mut conn,
-            migrations::MigrationContext {
+            MigrationContext {
                 config_path: Path::new(".").to_owned(),
                 enable_side_effects: false,
                 version: None,

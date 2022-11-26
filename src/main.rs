@@ -1,9 +1,10 @@
-pub mod adapters;
-pub mod app_context;
-pub mod cli;
-pub mod config;
-pub mod domain;
-pub mod utils;
+mod adapters;
+mod app_config;
+mod app_context;
+mod cli;
+mod domain;
+mod migrations;
+mod utils;
 
 use std::fmt::Debug;
 
@@ -19,7 +20,7 @@ use domain::{
     models::{Config, ConfigKey, ConfigStatus},
 };
 
-use crate::config::AppConfig;
+use crate::app_config::AppConfig;
 
 #[derive(Debug, Parser)]
 #[clap(name = "git-kit")]
