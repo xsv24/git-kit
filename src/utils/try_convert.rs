@@ -1,4 +1,7 @@
-use std::{path::PathBuf, process::Command};
+use std::{
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 use anyhow::Context;
 
@@ -28,6 +31,24 @@ impl TryConvert<String> for PathBuf {
 
 impl TryConvert<String> for &PathBuf {
     fn try_convert(self) -> anyhow::Result<String> {
+        self.to_owned().try_convert()
+    }
+}
+
+impl TryConvert<PathBuf> for String {
+    fn try_convert(self) -> anyhow::Result<PathBuf> {
+        let path = Path::new(&self);
+
+        if path.exists() {
+            Ok(path.to_owned())
+        } else {
+            Err(anyhow::anyhow!("Expected file not found."))
+        }
+    }
+}
+
+impl TryConvert<PathBuf> for &String {
+    fn try_convert(self) -> anyhow::Result<PathBuf> {
         self.to_owned().try_convert()
     }
 }

@@ -389,7 +389,14 @@ mod tests {
 
     fn fake_context<'a, C: Git>(git: C) -> anyhow::Result<AppContext<C, Sqlite>> {
         let mut connection = Connection::open_in_memory()?;
-        db_migrations(&mut connection, None)?;
+        db_migrations(
+            &mut connection,
+            migrations::MigrationContext {
+                config_path: PathBuf::new(),
+                enable_side_effects: false,
+                version: None,
+            },
+        )?;
 
         let context = AppContext {
             store: Sqlite::new(connection)?,
