@@ -5,9 +5,9 @@ use rusqlite::{types::Type, Connection, Row, Transaction};
 use crate::{
     domain::{
         self,
-        models::{Branch, Config, ConfigStatus},
+        models::{Branch, Config, ConfigKey, ConfigStatus},
     },
-    utils::{expected_path, TryConvert},
+    utils::TryConvert,
 };
 
 pub struct Sqlite {
@@ -79,29 +79,26 @@ impl domain::adapters::Store for Sqlite {
     }
 
     fn persist_config(&self, config: &Config) -> anyhow::Result<()> {
-        if config.key.to_string().eq("default") {
-            anyhow::bail!("Cannot override default!");
+        if config.key == ConfigKey::Default {
+            anyhow::bail!("Cannot override 'default' config!");
         }
 
-        log::info!(
-            "insert or update user config '{}' path '{}'",
-            &config.key,
-            &config.path.display()
-        );
-
+        let key: String = config.key.clone().into();
         let path = (&config.path).try_convert()?;
+
+        log::info!("insert or update user config '{}' path '{}'", &key, &path);
 
         self.connection
             .execute(
                 "REPLACE INTO config (key, path, status) VALUES (?1, ?2, ?3)",
-                (config.key.clone(), path, String::from(ConfigStatus::ACTIVE)),
+                (key, path, String::from(ConfigStatus::ACTIVE)),
             )
             .context("Failed to update config.")?;
 
         Ok(())
     }
 
-    fn set_active_config(&mut self, key: String) -> anyhow::Result<Config> {
+    fn set_active_config(&mut self, key: ConfigKey) -> anyhow::Result<Config> {
         let transaction = self.transaction()?;
 
         let (active, inactive) = (
@@ -116,6 +113,8 @@ impl domain::adapters::Store for Sqlite {
                 (&inactive, &active),
             )
             .with_context(|| format!("Failed to set any '{}' config to '{}'.", inactive, active))?;
+
+        let key: String = key.into();
 
         // Update the desired config to 'ACTIVE'
         transaction
@@ -165,32 +164,27 @@ impl<'a> TryFrom<&Row<'a>> for Config {
     type Error = rusqlite::Error;
 
     fn try_from(value: &Row) -> Result<Self, Self::Error> {
-        let path = expected_path(&value.get::<_, String>(1)?).map_err(|e| {
+        let status = value.get::<_, String>(2)?.try_into().map_err(|e| {
             log::error!("Corrupted data failed to convert to valid path, {}", e);
             rusqlite::Error::InvalidColumnType(
-                1,
+                2,
                 "Failed to convert to valid path".into(),
                 Type::Text,
             )
         })?;
 
-        let status = value.get::<_, String>(2)?.try_into().map_err(|e| {
-            log::error!(
-                "Corrupted data failed to convert to valid config status, {}",
-                e
-            );
-            rusqlite::Error::InvalidColumnType(
-                2,
-                "Failed to convert to 'ConfigStatus'".into(),
-                Type::Text,
-            )
+        let config = Config::new(
+            ConfigKey::from(value.get::<_, String>(0)?),
+            value.get::<_, String>(1)?,
+            status,
+        )
+        .map_err(|e| {
+            log::error!("Corrupted data failed to convert 'Config', {}", e);
+
+            rusqlite::Error::ExecuteReturnedResults
         })?;
 
-        Ok(Config {
-            key: value.get(0)?,
-            path,
-            status,
-        })
+        Ok(config)
     }
 }
 
@@ -402,7 +396,7 @@ mod tests {
         // Assert
         assert_eq!(config_count(&store.connection)?, 1);
 
-        let expected = select_config_row(&store.connection, config.key.clone())?;
+        let expected = select_config_row(&store.connection, config.key.clone().into())?;
 
         assert_eq!(expected, config);
 
@@ -428,7 +422,7 @@ mod tests {
         // Assert
         assert_eq!(config_count(&store.connection)?, 1);
 
-        let actual = select_config_row(&store.connection, config.key.clone())?;
+        let actual = select_config_row(&store.connection, config.key.clone().into())?;
         assert_eq!(actual, actual);
 
         Ok(())
@@ -444,7 +438,7 @@ mod tests {
         let store = Sqlite::new(connection)?;
 
         // Act
-        let config = store.get_config(Some(expected.key.clone())).unwrap();
+        let config = store.get_config(Some(expected.key.clone().into())).unwrap();
 
         // Assert
         assert_eq!(1, config_count(&store.connection)?);
@@ -493,7 +487,7 @@ mod tests {
     #[test]
     fn set_active_config_sets_any_active_configs_inactive() -> anyhow::Result<()> {
         let connection = setup_db()?;
-        
+
         for _ in 0..(2..10).fake() {
             let config = Config {
                 status: ConfigStatus::ACTIVE,
@@ -502,7 +496,7 @@ mod tests {
 
             insert_config(&connection, &config)?;
         }
-        
+
         let original = Config {
             status: ConfigStatus::INACTIVE,
             ..fake_config()
@@ -520,16 +514,18 @@ mod tests {
             .into_iter()
             .filter(|c| c.status == ConfigStatus::ACTIVE)
             .collect();
-        
+
         assert_eq!(active.len(), 1);
         let only_active = active.first().unwrap();
-        let expected = Config { status: ConfigStatus::ACTIVE, ..original };
+        let expected = Config {
+            status: ConfigStatus::ACTIVE,
+            ..original
+        };
         assert_eq!(&expected, only_active);
-        
+
         Ok(())
     }
 
-    
     fn fake_app_config() -> AppConfig {
         AppConfig {
             commit: CommitConfig {
@@ -540,17 +536,19 @@ mod tests {
 
     fn fake_config() -> Config {
         Config {
-            key: Faker.fake(),
+            key: ConfigKey::User(Faker.fake()),
             path: Path::new(".").to_owned(),
             status: ConfigStatus::ACTIVE,
         }
     }
 
     fn insert_config(connection: &Connection, config: &Config) -> anyhow::Result<()> {
+        let key: String = config.key.clone().into();
+
         connection.execute(
             "INSERT INTO config (key, path, status) VALUES (?1, ?2, ?3)",
             (
-                &config.key,
+                &key,
                 (&config.path).try_convert()?,
                 String::from(config.status.clone()),
             ),
@@ -583,20 +581,18 @@ mod tests {
     }
 
     fn select_config_row(conn: &Connection, key: String) -> anyhow::Result<Config> {
-        let path = conn.query_row("SELECT * FROM config where key = ?1;",
-        [key],
-        |row| Config::try_from(row))?;
+        let path = conn.query_row("SELECT * FROM config where key = ?1;", [key], |row| {
+            Config::try_from(row)
+        })?;
 
         Ok(path)
     }
 
     fn select_all_config(conn: &Connection) -> anyhow::Result<Vec<Config>> {
         let mut statement = conn.prepare("SELECT * FROM config")?;
-        let configs = statement.query_map(
-            [],
-            |row| Config::try_from(row)
-        )?
-        .collect::<Result<Vec<_>, _>>()?;
+        let configs = statement
+            .query_map([], |row| Config::try_from(row))?
+            .collect::<Result<Vec<_>, _>>()?;
 
         Ok(configs)
     }

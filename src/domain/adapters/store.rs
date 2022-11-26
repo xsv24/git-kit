@@ -1,4 +1,4 @@
-use crate::domain::models::{Branch, Config};
+use crate::domain::models::{Branch, Config, ConfigKey};
 
 pub trait Store {
     fn persist_branch(&self, branch: &Branch) -> anyhow::Result<()>;
@@ -7,7 +7,7 @@ pub trait Store {
 
     fn persist_config(&self, config: &Config) -> anyhow::Result<()>;
 
-    fn set_active_config(&mut self, key: String) -> anyhow::Result<Config>;
+    fn set_active_config(&mut self, key: ConfigKey) -> anyhow::Result<Config>;
 
     fn get_config(&self, key: Option<String>) -> anyhow::Result<Config>;
 
