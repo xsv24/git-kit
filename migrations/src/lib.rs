@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use anyhow::Context;
 use rusqlite::Connection;
-use rusqlite_migration::{M, Migrations};
+use rusqlite_migration::{Migrations, M};
 
 #[derive(Clone)]
 pub struct MigrationContext {
@@ -15,7 +15,6 @@ pub fn db_migrations(
     connection: &mut Connection,
     context: MigrationContext,
 ) -> anyhow::Result<Migrations> {
-
     let migrations = Migrations::new(vec![
         M::up(
             "CREATE TABLE IF NOT EXISTS branch (
@@ -23,22 +22,23 @@ pub fn db_migrations(
                 ticket TEXT,
                 data BLOB,
                 created TEXT NOT NULL
-            );"
-        ).down("DROP TABLE branch;"),
+            );",
+        )
+        .down("DROP TABLE branch;"),
         M::up(
             "CREATE TABLE IF NOT EXISTS config (
                 key TEXT NOT NULL PRIMARY KEY,
                 path TEXT NOT NULL,
                 status TEXT NOT NULL 
-            );"
-        ).down("DROP TABLE config;")
+            );",
+        )
+        .down("DROP TABLE config;"),
     ]);
 
     if let Some(version) = context.version {
         migrations
             .to_version(connection, version)
             .with_context(|| format!("Failed to apply migration version '{}'", version))?;
-        
     } else {
         migrations
             .to_latest(connection)
@@ -46,18 +46,20 @@ pub fn db_migrations(
     };
 
     let version: usize = migrations
-        .current_version(&connection)
+        .current_version(connection)
         .context("Failed to get current migration version.")?
         .into();
 
     // Had to do this dynamically since the default path will differ between operating systems.
     if context.enable_side_effects && version == 2 {
-        let config_default = context.config_path.to_str()
+        let config_default = context
+            .config_path
+            .to_str()
             .context("Expected valid default config path.")?;
 
         connection.execute(
             "INSERT OR IGNORE INTO config (key, path, status) VALUES (?1, ?2, ?3);",
-            ["default", config_default, "ACTIVE"]
+            ["default", config_default, "ACTIVE"],
         )?;
     }
 
@@ -68,9 +70,8 @@ pub fn db_migrations(
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
     use rusqlite::Connection;
-    use rusqlite_migration::Migrations;
+    use std::path::Path;
 
     use crate::{db_migrations, MigrationContext};
 
@@ -80,7 +81,7 @@ mod tests {
         let defaults = MigrationContext {
             config_path: Path::new(".").to_owned(),
             enable_side_effects: true,
-            version: Some(version)
+            version: Some(version),
         };
 
         let migrations = db_migrations(&mut connection, defaults.clone()).unwrap();
@@ -94,7 +95,7 @@ mod tests {
 
     #[test]
     fn verify_migration_1() {
-        let (connection, tables, _) = arrange(1);
+        let (_, tables, _) = arrange(1);
 
         assert_eq!(tables.len(), 1);
         assert!(tables.contains(&"branch".to_string()));
@@ -102,13 +103,14 @@ mod tests {
 
     #[test]
     fn verify_migration_2() {
-        let (connection, tables, defaults) = arrange(2);
-        
+        let (connection, tables, _) = arrange(2);
+
         assert_eq!(tables.len(), 2);
         assert!(tables.contains(&"branch".to_string()));
         assert!(tables.contains(&"config".to_string()));
 
-        let mut default_config = connection.prepare("SELECT * FROM config WHERE key='default'")
+        let mut default_config = connection
+            .prepare("SELECT * FROM config WHERE key='default'")
             .unwrap();
 
         let config = default_config
@@ -125,17 +127,18 @@ mod tests {
     }
 
     fn get_table_names(connection: &mut Connection) -> Vec<String> {
-
-        let mut statement = connection.prepare("SELECT name FROM sqlite_schema WHERE type='table'")
+        let mut statement = connection
+            .prepare("SELECT name FROM sqlite_schema WHERE type='table'")
             .unwrap();
-        
-        let tables = statement.query_map([], |row| {
-            let table: String = row.get(0)?;
-            Ok(table)
-        })
-        .unwrap()
-        .collect::<Result<Vec<String>, _>>()
-        .unwrap();
+
+        let tables = statement
+            .query_map([], |row| {
+                let table: String = row.get(0)?;
+                Ok(table)
+            })
+            .unwrap()
+            .collect::<Result<Vec<String>, _>>()
+            .unwrap();
 
         tables
     }
