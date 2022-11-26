@@ -1,11 +1,11 @@
 #[derive(Debug, Clone, clap::Subcommand)]
 pub enum Arguments {
-    /// Update the global configuration
-    Create { key: String, path: String },
-    /// Set the configuration.
+    /// Add / register a custom config file.
+    Add { key: String, path: String },
+    /// Select config file to use.
     Set { key: String },
-    /// Print out the current configuration
+    /// Display the current config in use.
     Show,
-    /// Reset to the default configuration
+    /// Reset to the default config.
     Reset,
 }

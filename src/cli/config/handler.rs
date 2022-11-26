@@ -7,7 +7,7 @@ use super::Arguments;
 
 pub fn handler<S: Store>(store: &mut S, arguments: Arguments) -> anyhow::Result<()> {
     let config = match arguments {
-        Arguments::Create { key, path } => {
+        Arguments::Add { key, path } => {
             let config = Config::new(key.into(), path, ConfigStatus::ACTIVE)?;
             store.persist_config(&config)?;
             store.set_active_config(config.key)?
