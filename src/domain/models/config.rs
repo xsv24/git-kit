@@ -52,7 +52,7 @@ mod test {
         let error = Config::new(
             ConfigKey::User(Faker.fake()),
             user_config.to_str().unwrap().to_string(),
-            ConfigStatus::ACTIVE,
+            ConfigStatus::Active,
         )
         .unwrap_err();
 

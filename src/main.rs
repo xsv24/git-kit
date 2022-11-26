@@ -66,7 +66,7 @@ impl Cli {
         let git = Git;
 
         let config = match &self.config {
-            Some(path) => Config::new(ConfigKey::Once, path.into(), ConfigStatus::ACTIVE),
+            Some(path) => Config::new(ConfigKey::Once, path.into(), ConfigStatus::Active),
             None => store.get_config(None),
         }?;
 

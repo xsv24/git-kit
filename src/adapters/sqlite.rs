@@ -83,7 +83,7 @@ impl domain::adapters::Store for Sqlite {
         self.connection
             .execute(
                 "REPLACE INTO config (key, path, status) VALUES (?1, ?2, ?3)",
-                (key, path, String::from(ConfigStatus::ACTIVE)),
+                (key, path, String::from(ConfigStatus::Active)),
             )
             .context("Failed to update config.")?;
 
@@ -93,18 +93,18 @@ impl domain::adapters::Store for Sqlite {
     fn set_active_config(&mut self, key: ConfigKey) -> anyhow::Result<Config> {
         let transaction = self.transaction()?;
 
-        let (active, inactive) = (
-            String::from(ConfigStatus::ACTIVE),
-            String::from(ConfigStatus::INACTIVE),
+        let (active, disabled) = (
+            String::from(ConfigStatus::Active),
+            String::from(ConfigStatus::Disabled),
         );
 
-        // Update any 'ACTIVE' config to 'INACTIVE'
+        // Update any 'ACTIVE' config to 'DISABLED'
         transaction
             .execute(
                 "UPDATE config SET status = ?1 WHERE status = ?2;",
-                (&inactive, &active),
+                (&disabled, &active),
             )
-            .with_context(|| format!("Failed to set any '{}' config to '{}'.", inactive, active))?;
+            .with_context(|| format!("Failed to set any '{}' config to '{}'.", disabled, active))?;
 
         let key: String = key.into();
 
@@ -133,7 +133,7 @@ impl domain::adapters::Store for Sqlite {
             }
             None => self.connection.query_row(
                 "SELECT * FROM config WHERE status = ?1",
-                [String::from(ConfigStatus::ACTIVE)],
+                [String::from(ConfigStatus::Active)],
                 |row| Config::try_from(row),
             ),
         }?;
@@ -443,7 +443,7 @@ mod tests {
     fn get_config_by_active() -> anyhow::Result<()> {
         // Arrange
         let expected = Config {
-            status: ConfigStatus::ACTIVE,
+            status: ConfigStatus::Active,
             ..fake_config()
         };
         let connection = setup_db()?;
@@ -462,7 +462,7 @@ mod tests {
     #[test]
     fn set_active_config_success() -> anyhow::Result<()> {
         let mut original = Config {
-            status: ConfigStatus::INACTIVE,
+            status: ConfigStatus::Disabled,
             ..fake_config()
         };
         let connection = setup_db()?;
@@ -471,7 +471,7 @@ mod tests {
         let mut store = Sqlite::new(connection)?;
         let actual = store.set_active_config(original.key.clone())?;
 
-        original.status = ConfigStatus::ACTIVE;
+        original.status = ConfigStatus::Active;
         assert_eq!(original, actual);
 
         Ok(())
@@ -483,7 +483,7 @@ mod tests {
 
         for _ in 0..(2..10).fake() {
             let config = Config {
-                status: ConfigStatus::ACTIVE,
+                status: ConfigStatus::Active,
                 ..fake_config()
             };
 
@@ -491,7 +491,7 @@ mod tests {
         }
 
         let original = Config {
-            status: ConfigStatus::INACTIVE,
+            status: ConfigStatus::Disabled,
             ..fake_config()
         };
 
@@ -505,13 +505,13 @@ mod tests {
 
         let active: Vec<Config> = configs
             .into_iter()
-            .filter(|c| c.status == ConfigStatus::ACTIVE)
+            .filter(|c| c.status == ConfigStatus::Active)
             .collect();
 
         assert_eq!(active.len(), 1);
         let only_active = active.first().unwrap();
         let expected = Config {
-            status: ConfigStatus::ACTIVE,
+            status: ConfigStatus::Active,
             ..original
         };
         assert_eq!(&expected, only_active);
@@ -531,7 +531,7 @@ mod tests {
         Config {
             key: ConfigKey::User(Faker.fake()),
             path: Path::new(".").to_owned(),
-            status: ConfigStatus::ACTIVE,
+            status: ConfigStatus::Active,
         }
     }
 
