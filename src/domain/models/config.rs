@@ -31,9 +31,8 @@ impl fmt::Display for Config {
 
         write!(
             f,
-            "name: {}\nstatus: '{}'\npath: {}",
+            "Configuration is set to '{}' at path:\n {}",
             key,
-            String::from(self.status.clone()),
             self.path.display()
         )
     }
