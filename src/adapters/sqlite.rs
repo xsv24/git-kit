@@ -529,8 +529,7 @@ mod tests {
 
     fn fake_config() -> Config {
         let path = Path::new(".").to_owned();
-        let absolute_path = std::fs::canonicalize(path)
-            .expect("Valid conversion to absolute path");
+        let absolute_path = std::fs::canonicalize(path).expect("Valid conversion to absolute path");
 
         Config {
             key: ConfigKey::User(Faker.fake()),
