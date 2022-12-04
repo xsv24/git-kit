@@ -469,7 +469,9 @@ mod tests {
         let store = Sqlite::new(connection)?;
 
         // Act
-        let config = store.get_configuration(Some(expected.key.clone().into())).unwrap();
+        let config = store
+            .get_configuration(Some(expected.key.clone().into()))
+            .unwrap();
 
         // Assert
         assert_eq!(1, config_count(&store.connection)?);

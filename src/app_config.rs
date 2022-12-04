@@ -1,4 +1,7 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 use anyhow::Context;
 use directories::ProjectDirs;
@@ -79,7 +82,7 @@ impl AppConfig {
         Ok(template)
     }
 
-    pub fn join_config_filename(repo_config: &PathBuf) -> PathBuf {
+    pub fn join_config_filename(repo_config: &Path) -> PathBuf {
         let filename = ".git-kit.yml";
         repo_config.join(filename)
     }
