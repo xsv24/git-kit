@@ -34,6 +34,10 @@ pub fn db_migrations(
             );",
         )
         .down("DROP TABLE config;"),
+        M::up("ALTER TABLE branch ADD COLUMN link TEXT;")
+            .down("ALTER TABLE branch DROP COLUMN link;"),
+        M::up("ALTER TABLE branch ADD COLUMN scope TEXT;")
+            .down("ALTER TABLE branch DROP COLUMN scope;")
     ]);
 
     if let Some(version) = context.version {
