@@ -26,7 +26,7 @@ impl<'a, C: Git, S: Store> Actor for Actions<'a, C, S> {
         let repo_name = self.context.git.get_repo_name()?;
         let branch_name = self.context.git.get_branch_name()?;
 
-        let branch = Branch::new(&branch_name, &repo_name, Some(args.ticket))?;
+        let branch = Branch::new(&branch_name, &repo_name, args.ticket, args.link, args.scope)?;
         self.context.store.persist_branch(&branch)?;
 
         Ok(branch)
@@ -48,7 +48,7 @@ impl<'a, C: Git, S: Store> Actor for Actions<'a, C, S> {
         // We want to store the branch name against and ticket number
         // So whenever we commit we get the ticket number from the branch
         let repo_name = self.context.git.get_repo_name()?;
-        let branch = Branch::new(&args.name, &repo_name, args.ticket.clone())?;
+        let branch = Branch::new(&args.name, &repo_name, args.ticket, args.link, args.scope)?;
         self.context.store.persist_branch(&branch)?;
 
         Ok(branch)
