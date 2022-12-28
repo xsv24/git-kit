@@ -545,49 +545,49 @@ mod tests {
             "bug".into(),
             TemplateConfig {
                 description: Faker.fake(),
-                content: "{ticket_num} 🐛 {message}".into(),
+                content: "[{ticket_num}] 🐛 {message}".into(),
             },
         );
         map.insert(
             "feature".into(),
             TemplateConfig {
                 description: Faker.fake(),
-                content: "{ticket_num} ✨ {message}".into(),
+                content: "[{ticket_num}] ✨ {message}".into(),
             },
         );
         map.insert(
             "refactor".into(),
             TemplateConfig {
                 description: Faker.fake(),
-                content: "{ticket_num} 🧹 {message}".into(),
+                content: "[{ticket_num}] 🧹 {message}".into(),
             },
         );
         map.insert(
             "break".into(),
             TemplateConfig {
                 description: Faker.fake(),
-                content: "{ticket_num} ⚠️ {message}".into(),
+                content: "[{ticket_num}] ⚠️ {message}".into(),
             },
         );
         map.insert(
             "deps".into(),
             TemplateConfig {
                 description: Faker.fake(),
-                content: "{ticket_num} 📦 {message}".into(),
+                content: "[{ticket_num}] 📦 {message}".into(),
             },
         );
         map.insert(
             "docs".into(),
             TemplateConfig {
                 description: Faker.fake(),
-                content: "{ticket_num} 📖 {message}".into(),
+                content: "[{ticket_num}] 📖 {message}".into(),
             },
         );
         map.insert(
             "test".into(),
             TemplateConfig {
                 description: Faker.fake(),
-                content: "{ticket_num} 🧪 {message}".into(),
+                content: "[{ticket_num}] 🧪 {message}".into(),
             },
         );
 

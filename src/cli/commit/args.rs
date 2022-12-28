@@ -165,6 +165,30 @@ mod tests {
     }
 
     #[test]
+    fn empty_scope_removes_parentheses() -> anyhow::Result<()> {
+        let context = AppContext {
+            store: Sqlite::new(setup_db(None)?)?,
+            git: TestCommand::fake(),
+            config: fake_config(),
+        };
+
+        let args = Arguments {
+            message: Some(Faker.fake()),
+            scope: Some("".into()),
+            ticket: Some(Faker.fake()),
+            ..fake_args()
+        };
+
+        let actual = args.commit_message("({scope}) [{ticket_num}] {message}".into(), &context)?;
+        let expected = format!("[{}] {}", args.ticket.unwrap(), args.message.unwrap());
+
+        context.close()?;
+        assert_eq!(actual, expected);
+
+        Ok(())
+    }
+
+    #[test]
     fn when_ticket_num_is_empty_square_brackets_are_removed() -> anyhow::Result<()> {
         for ticket in [Some("".into()), Some("   ".into()), None] {
             let context = AppContext {
@@ -174,12 +198,12 @@ mod tests {
             };
 
             let args = Arguments {
-                template: Faker.fake(),
                 ticket,
                 message: Some(Faker.fake()),
+                ..fake_args()
             };
 
-            let actual = args.commit_message("{ticket_num} {message}".into(), &context)?;
+            let actual = args.commit_message("[{ticket_num}] {message}".into(), &context)?;
             let expected = format!("{}", args.message.unwrap());
 
             context.close()?;
@@ -201,9 +225,10 @@ mod tests {
             template: Faker.fake(),
             ticket: Some(Faker.fake()),
             message: Some(Faker.fake()),
+            ..fake_args()
         };
 
-        let actual = args.commit_message("{ticket_num} {message}".into(), &context)?;
+        let actual = args.commit_message("[{ticket_num}] {message}".into(), &context)?;
         let expected = format!("[{}] {}", args.ticket.unwrap(), args.message.unwrap());
 
         context.close()?;
@@ -221,17 +246,44 @@ mod tests {
         };
 
         let args = Arguments {
-            template: Faker.fake(),
             ticket: Some(Faker.fake()),
             message: None,
+            ..fake_args()
         };
 
         let actual = args.commit_message("{ticket_num} {message}".into(), &context)?;
-        let expected = format!("[{}] ", args.ticket.unwrap());
+        let expected = format!("{}", args.ticket.unwrap());
 
         context.close()?;
         assert_eq!(expected.trim(), actual);
 
+        Ok(())
+    }
+
+    #[test]
+    fn commit_template_with_empty_brackets_such_as_markdown_checklist_are_not_removed(
+    ) -> anyhow::Result<()> {
+        let context = AppContext {
+            store: Sqlite::new(setup_db(None)?)?,
+            git: TestCommand::fake(),
+            config: fake_config(),
+        };
+
+        let args = Arguments {
+            message: Some(Faker.fake()),
+            ticket: None,
+            scope: None,
+            ..fake_args()
+        };
+
+        let actual = args.commit_message(
+            "fix({scope}): [{ticket_num}] {message}\n- done? [ ]".into(),
+            &context,
+        )?;
+        let expected = format!("fix: {}\n- done? [ ]", args.message.unwrap());
+
+        context.close()?;
+        assert_eq!(expected.trim(), actual);
         Ok(())
     }
 
@@ -252,7 +304,7 @@ mod tests {
             ..fake_args()
         };
 
-        let actual = args.commit_message("{ticket_num} {message}".into(), &context)?;
+        let actual = args.commit_message("[{ticket_num}] {message}".into(), &context)?;
         let expected = format!(
             "[{}] {}",
             &commands.branch_name,
@@ -270,6 +322,7 @@ mod tests {
             template: Faker.fake(),
             ticket: Faker.fake(),
             message: Faker.fake(),
+            scope: Faker.fake(),
         }
     }
 
@@ -339,6 +392,17 @@ mod tests {
         }
 
         Ok(())
+    }
+
+    #[test]
+    fn brackets_match() {
+        let regex = Arguments::brackets_regex("target").unwrap();
+        assert!(regex.is_match("[{target}]"));
+        assert!(regex.is_match("[{target}] "));
+        assert!(regex.is_match("({target})"));
+        assert!(regex.is_match("({target})\t"));
+        assert!(regex.is_match("{{target}} "));
+        assert!(regex.is_match("{target}"));
     }
 
     fn fake_template_config() -> HashMap<String, TemplateConfig> {
