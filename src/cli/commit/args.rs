@@ -22,7 +22,7 @@ pub struct Arguments {
     #[clap(short, long, value_parser)]
     pub message: Option<String>,
 
-    /// Scope dependency related to the commit.
+    /// Short describing a section of the codebase the changes relate to.
     #[clap(short, long, value_parser)]
     pub scope: Option<String>,
 }
@@ -98,6 +98,7 @@ mod tests {
         adapters::sqlite::Sqlite,
         app_config::{AppConfig, CommitConfig, TemplateConfig},
         domain::{adapters::CheckoutStatus, models::Branch},
+        migrations::{db_migrations, MigrationContext},
     };
     use fake::{Fake, Faker};
     use rusqlite::Connection;
@@ -291,7 +292,7 @@ mod tests {
     fn commit_template_ticket_num_is_replaced_with_branch_name() -> anyhow::Result<()> {
         let commands = TestCommand::fake();
 
-        let branch = Branch::new(&commands.branch_name, &commands.repo, None)?;
+        let branch = Branch::new(&commands.branch_name, &commands.repo, None, None, None)?;
 
         let context = AppContext {
             store: Sqlite::new(setup_db(Some(&branch))?)?,
@@ -470,26 +471,27 @@ mod tests {
     }
 
     fn setup_db(branch: Option<&Branch>) -> anyhow::Result<Connection> {
-        let conn = Connection::open_in_memory()?;
+        let mut conn = Connection::open_in_memory()?;
 
-        conn.execute(
-            "CREATE TABLE branch (
-                name TEXT NOT NULL PRIMARY KEY,
-                ticket TEXT,
-                data BLOB,
-                created TEXT NOT NULL
-            )",
-            (),
+        db_migrations(
+            &mut conn,
+            MigrationContext {
+                config_path: PathBuf::new(),
+                enable_side_effects: false,
+                version: None,
+            },
         )?;
 
         if let Some(branch) = branch {
             conn.execute(
-                "INSERT INTO branch (name, ticket, data, created) VALUES (?1, ?2, ?3, ?4)",
+                "INSERT INTO branch (name, ticket, data, created, link, scope) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
                 (
                     &branch.name,
                     &branch.ticket,
                     &branch.data,
                     branch.created.to_rfc3339(),
+                    &branch.link,
+                    &branch.scope
                 ),
             )?;
         }

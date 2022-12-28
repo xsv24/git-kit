@@ -91,8 +91,8 @@ mod tests {
         let repo = Faker.fake::<String>();
 
         let command = checkout::Arguments {
-            name: Faker.fake::<String>(),
             ticket: Some(Faker.fake()),
+            ..fake_checkout_args()
         };
 
         let git_commands = GitCommandMock {
@@ -115,8 +115,13 @@ mod tests {
             &git_commands.branch_name.unwrap()
         );
 
-        assert_eq!(&branch.name, &name);
-        assert_eq!(branch.ticket, command.ticket.unwrap());
+        let expected = Branch {
+            name,
+            ticket: command.ticket.unwrap(),
+            ..branch.clone()
+        };
+
+        assert_eq!(branch, expected);
 
         context.close()?;
 
@@ -157,8 +162,16 @@ mod tests {
             &git_commands.branch_name.unwrap()
         );
 
-        assert_eq!(&branch.name, &name);
-        assert_eq!(branch.ticket, command.ticket.unwrap());
+        let expected = Branch {
+            name,
+            ticket: command.ticket.unwrap(),
+            link: command.link,
+            scope: command.scope,
+            created: branch.created,
+            data: None,
+        };
+
+        assert_eq!(branch, expected);
 
         context.close()?;
 
@@ -229,8 +242,16 @@ mod tests {
             &git_commands.branch_name.unwrap()
         );
 
-        assert_eq!(&branch.name, &name);
-        assert_eq!(&branch.ticket, &command.name);
+        let expected = Branch {
+            name,
+            ticket: command.name,
+            scope: command.scope,
+            link: command.link,
+            data: None,
+            created: branch.created,
+        };
+
+        assert_eq!(branch, expected);
 
         context.close()?;
 
@@ -243,7 +264,8 @@ mod tests {
         let branch_name = Faker.fake::<String>();
         let repo = Faker.fake::<String>();
         let command = context::Arguments {
-            ticket: Faker.fake(),
+            ticket: Some(Faker.fake()),
+            ..fake_context_args()
         };
 
         let git_commands = GitCommandMock {
@@ -266,8 +288,14 @@ mod tests {
             &git_commands.branch_name.unwrap()
         );
 
-        assert_eq!(&branch.name, &name);
-        assert_eq!(branch.ticket, command.ticket);
+        let expected = Branch {
+            name,
+            ticket: command.ticket.unwrap(),
+            link: command.link,
+            scope: command.scope,
+            ..branch.clone()
+        };
+        assert_eq!(branch, expected);
 
         context.close()?;
 
@@ -347,26 +375,27 @@ mod tests {
             let context = fake_context(GitCommandMock::fake())?;
             let actions = Actions::new(&context);
 
-            let branch_name = context.git.get_branch_name()?;
-            let repo_name = context.git.get_repo_name()?;
+            let branch_name = Some(context.git.get_branch_name()?);
+            let repo_name = Some(context.git.get_repo_name()?);
+            let ticket = None;
             setup_db(
                 &context.store,
-                Some(&fake_branch(Some(branch_name.clone()), Some(repo_name))?),
+                Some(&fake_branch(branch_name.clone(), repo_name, ticket)?),
             )?;
 
             // Act
-            let contents = actions
+            let commit_message = actions
                 .commit(args.clone())
                 .expect("Error performing 'commit' action");
 
             // Assert
             let expected = format!(
                 "[{}] {} {}",
-                branch_name,
+                branch_name.unwrap(),
                 template_contents,
                 args.message.clone().unwrap_or("".into())
             );
-            assert_eq!(expected.trim(), contents);
+            assert_eq!(expected.trim(), commit_message);
 
             context.close()?;
         }
@@ -457,17 +486,29 @@ mod tests {
         }
     }
 
-    fn fake_branch(name: Option<String>, repo: Option<String>) -> anyhow::Result<Branch> {
+    fn fake_branch(
+        name: Option<String>,
+        repo: Option<String>,
+        ticket: Option<String>,
+    ) -> anyhow::Result<Branch> {
         let name = name.unwrap_or(Faker.fake());
         let repo = repo.unwrap_or(Faker.fake());
 
-        Ok(Branch::new(&name, &repo, None)?)
+        Ok(Branch::new(
+            &name,
+            &repo,
+            ticket,
+            Faker.fake(),
+            Faker.fake(),
+        )?)
     }
 
     fn fake_checkout_args() -> checkout::Arguments {
         checkout::Arguments {
             name: Faker.fake(),
             ticket: Some(Faker.fake()),
+            link: Some(Faker.fake()),
+            scope: Some(Faker.fake()),
         }
     }
 
@@ -477,6 +518,14 @@ mod tests {
             ticket: Faker.fake(),
             message: Faker.fake(),
             scope: Faker.fake(),
+        }
+    }
+
+    fn fake_context_args() -> context::Arguments {
+        context::Arguments {
+            ticket: Faker.fake(),
+            scope: Faker.fake(),
+            link: Faker.fake(),
         }
     }
 

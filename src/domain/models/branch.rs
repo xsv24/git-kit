@@ -1,13 +1,13 @@
 use chrono::{DateTime, Utc};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Branch {
     pub name: String,
     pub ticket: String,
     pub created: DateTime<Utc>,
     pub data: Option<Vec<u8>>,
     pub link: Option<String>,
-    pub scope: Option<String>
+    pub scope: Option<String>,
 }
 
 impl Branch {
@@ -16,7 +16,7 @@ impl Branch {
         repo: &str,
         ticket: Option<String>,
         link: Option<String>,
-        scope: Option<String>
+        scope: Option<String>,
     ) -> anyhow::Result<Branch> {
         Ok(Branch {
             name: format!("{}-{}", repo.trim(), name.trim()),
@@ -47,7 +47,13 @@ mod tests {
         let link = Faker.fake::<String>();
 
         // Act
-        let branch = Branch::new(&name, &repo, Some(ticket.clone()), Some(link.clone()), Some(scope.clone()))?;
+        let branch = Branch::new(
+            &name,
+            &repo,
+            Some(ticket.clone()),
+            Some(link.clone()),
+            Some(scope.clone()),
+        )?;
 
         // Assert
         assert_eq!(branch.name, format!("{}-{}", &repo, &name));

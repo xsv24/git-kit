@@ -37,7 +37,7 @@ pub fn db_migrations(
         M::up("ALTER TABLE branch ADD COLUMN link TEXT;")
             .down("ALTER TABLE branch DROP COLUMN link;"),
         M::up("ALTER TABLE branch ADD COLUMN scope TEXT;")
-            .down("ALTER TABLE branch DROP COLUMN scope;")
+            .down("ALTER TABLE branch DROP COLUMN scope;"),
     ]);
 
     if let Some(version) = context.version {

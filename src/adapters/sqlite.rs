@@ -258,14 +258,9 @@ mod tests {
         // Assert
         assert_eq!(branch_count(&store.connection)?, 1);
 
-        let (name, ticket, data, created, link, scope) = select_branch_row(&store.connection)?;
+        let actual_branch = select_branch_row(&store.connection)?;
 
-        assert_eq!(branch.name, name);
-        assert_eq!(branch.ticket, ticket);
-        assert_eq!(branch.data, data);
-        assert_eq!(branch.created.to_rfc3339(), created);
-        assert_eq!(branch.link, link);
-        assert_eq!(branch.scope, scope);
+        assert_eq!(branch, actual_branch);
 
         Ok(())
     }
@@ -300,14 +295,9 @@ mod tests {
         // Assert
         assert_eq!(branch_count(&store.connection)?, 1);
 
-        let (name, ticket, data, created, link, scope) = select_branch_row(&store.connection)?;
+        let actual_branch = select_branch_row(&store.connection)?;
 
-        assert_eq!(updated_branch.name, name);
-        assert_eq!(updated_branch.ticket, ticket);
-        assert_eq!(updated_branch.data, data);
-        assert_eq!(updated_branch.created.to_rfc3339(), created);
-        assert_eq!(updated_branch.link, link);
-        assert_eq!(updated_branch.scope, scope);
+        assert_eq!(updated_branch, actual_branch);
 
         Ok(())
     }
@@ -360,14 +350,9 @@ mod tests {
         let branch = context.store.get_branch(&random_key, &repo)?;
 
         context.close()?;
+
         // Assert
-        assert_eq!(random_branch.name, branch.name);
-        assert_eq!(random_branch.ticket, branch.ticket);
-        assert_eq!(random_branch.data, branch.data);
-        assert_eq!(
-            random_branch.created.to_rfc3339(),
-            branch.created.to_rfc3339()
-        );
+        assert_eq!(random_branch.to_owned(), branch);
 
         Ok(())
     }
@@ -641,16 +626,7 @@ mod tests {
         )?)
     }
 
-    fn select_branch_row(
-        conn: &Connection,
-    ) -> anyhow::Result<(
-        String,
-        String,
-        Option<Vec<u8>>,
-        String,
-        Option<String>,
-        Option<String>,
-    )> {
+    fn select_branch_row(conn: &Connection) -> anyhow::Result<Branch> {
         let (name, ticket, data, created, link, scope) =
             conn.query_row("SELECT * FROM branch", [], |row| {
                 Ok((
@@ -662,8 +638,16 @@ mod tests {
                     row.get::<_, Option<String>>(5)?,
                 ))
             })?;
+        let created = DateTime::parse_from_rfc3339(&created)?.with_timezone(&Utc);
 
-        Ok((name, ticket, data, created, link, scope))
+        Ok(Branch {
+            name,
+            ticket,
+            data,
+            created,
+            link,
+            scope,
+        })
     }
 
     fn select_config_row(conn: &Connection, key: String) -> anyhow::Result<Config> {
