@@ -37,7 +37,7 @@ fn main() {
             MigrationContext {
                 config_path: config_dir.join(".git-kit.yml"),
                 enable_side_effects: true,
-                version: Some(2),
+                version: Some(4),
             },
         )
         .expect("Failed to apply migrations.");

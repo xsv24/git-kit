@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use crate::{
     app_context::AppContext,
     domain::adapters::{Git, Store},
-    utils::string::{into_option, OptionStr},
+    utils::{merge, string::OptionStr},
 };
 use anyhow::Context;
 use clap::Args;
@@ -47,7 +47,7 @@ impl Arguments {
     ) -> anyhow::Result<String> {
         let template = format!("{{{}}}", target);
 
-        let message = match &replace.map_empty_to_none() {
+        let message = match &replace.none_if_empty() {
             Some(value) => {
                 log::info!("replace '{}' from template with '{}'", target, value);
                 message.replace(&template, value)
@@ -70,21 +70,32 @@ impl Arguments {
         context: &AppContext<C, S>,
     ) -> anyhow::Result<String> {
         log::info!("generate commit message for '{}'", &template);
-        let ticket = self.ticket.as_ref().map(|num| num.trim());
+        let branch = context
+            .store
+            .get_branch(
+                &context.git.get_branch_name()?,
+                &context.git.get_repo_name()?,
+            )
+            .ok();
 
-        let ticket_num = match ticket {
-            Some(num) => into_option(num),
-            None => context
-                .store
-                .get_branch(
-                    &context.git.get_branch_name()?,
-                    &context.git.get_repo_name()?,
-                )
-                .map_or(None, |branch| Some(branch.ticket)),
-        };
-        let contents = Self::replace_or_remove(template, "ticket_num", ticket_num)?;
+        let (ticket, scope, link) = branch
+            .map(|branch| (Some(branch.ticket), branch.scope, branch.link))
+            .unwrap_or((None, None, None));
+
+        let ticket = merge(
+            self.ticket.clone().none_if_empty(),
+            ticket.none_if_empty(),
+        );
+
+        let scope = merge(
+            self.scope.clone().none_if_empty(),
+            scope.none_if_empty(),
+        );
+
+        let contents = Self::replace_or_remove(template, "ticket_num", ticket)?;
+        let contents = Self::replace_or_remove(contents, "scope", scope)?;
+        let contents = Self::replace_or_remove(contents, "link", link)?;
         let contents = Self::replace_or_remove(contents, "message", self.message.clone())?;
-        let contents = Self::replace_or_remove(contents, "scope", self.scope.clone())?;
 
         Ok(contents)
     }
