@@ -23,11 +23,8 @@ fn main() {
         // Create config dir if not exists.
         fs::create_dir(config_dir).ok();
 
-        copy_or_replace(
-            &project_root.join(".git-kit.yml"),
-            &config_dir.join(".git-kit.yml"),
-        )
-        .expect("Failed to copy or update to the latest config file for git-kit");
+        copy_or_replace(&project_root.join("templates"), &config_dir.to_path_buf())
+            .expect("Failed to copy or update to the latest config file for git-kit");
 
         let mut connection =
             Connection::open(config_dir.join("db")).expect("Failed to open sqlite connection");
@@ -35,8 +32,10 @@ fn main() {
         db_migrations(
             &mut connection,
             MigrationContext {
-                config_path: config_dir.join(".git-kit.yml"),
-                enable_side_effects: true,
+                default_configs: Some(migrations::DefaultConfig {
+                    default: config_dir.join("default.yml"),
+                    conventional: config_dir.join("conventional.yml"),
+                }),
                 version: Some(4),
             },
         )

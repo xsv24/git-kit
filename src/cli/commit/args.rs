@@ -82,15 +82,9 @@ impl Arguments {
             .map(|branch| (Some(branch.ticket), branch.scope, branch.link))
             .unwrap_or((None, None, None));
 
-        let ticket = merge(
-            self.ticket.clone().none_if_empty(),
-            ticket.none_if_empty(),
-        );
+        let ticket = merge(self.ticket.clone().none_if_empty(), ticket.none_if_empty());
 
-        let scope = merge(
-            self.scope.clone().none_if_empty(),
-            scope.none_if_empty(),
-        );
+        let scope = merge(self.scope.clone().none_if_empty(), scope.none_if_empty());
 
         let contents = Self::replace_or_remove(template, "ticket_num", ticket)?;
         let contents = Self::replace_or_remove(contents, "scope", scope)?;
@@ -487,8 +481,7 @@ mod tests {
         db_migrations(
             &mut conn,
             MigrationContext {
-                config_path: PathBuf::new(),
-                enable_side_effects: false,
+                default_configs: None,
                 version: None,
             },
         )?;

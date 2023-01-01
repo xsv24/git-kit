@@ -80,6 +80,7 @@ mod tests {
     use crate::app_config::TemplateConfig;
     use crate::app_context::AppContext;
     use crate::domain::adapters::CheckoutStatus;
+    use crate::migrations::DefaultConfig;
     use crate::migrations::{db_migrations, MigrationContext};
 
     use super::*;
@@ -448,8 +449,7 @@ mod tests {
         db_migrations(
             &mut connection,
             MigrationContext {
-                config_path: PathBuf::new(),
-                enable_side_effects: false,
+                default_configs: None,
                 version: None,
             },
         )?;
