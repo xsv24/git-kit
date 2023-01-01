@@ -177,10 +177,13 @@ impl<'a> TryFrom<&Row<'a>> for Config {
 
     fn try_from(value: &Row) -> Result<Self, Self::Error> {
         let status = value.get::<_, String>(2)?.try_into().map_err(|e| {
-            log::error!("Corrupted data failed to convert to valid path, {}", e);
+            log::error!(
+                "Corrupted data failed to convert to valid config status, {}",
+                e
+            );
             rusqlite::Error::InvalidColumnType(
                 2,
-                "Failed to convert to valid path".into(),
+                "Failed to convert to valid config status".into(),
                 Type::Text,
             )
         })?;
@@ -684,8 +687,7 @@ mod tests {
         db_migrations(
             &mut conn,
             MigrationContext {
-                config_path: Path::new(".").to_owned(),
-                enable_side_effects: false,
+                default_configs: None,
                 version: None,
             },
         )?;
