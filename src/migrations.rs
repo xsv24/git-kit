@@ -195,7 +195,7 @@ mod tests {
 
         assert_eq!(conventional_config.0, "conventional");
         assert_eq!(conventional_config.1, "conventional.yml");
-        assert_eq!(conventional_config.2, "INACTIVE");
+        assert_eq!(conventional_config.2, "DISABLED");
     }
 
     #[test]
@@ -236,7 +236,7 @@ mod tests {
 
         assert_eq!(conventional_config.0, "conventional");
         assert_eq!(conventional_config.1, "conventional.yml");
-        assert_eq!(conventional_config.2, "INACTIVE");
+        assert_eq!(conventional_config.2, "DISABLED");
     }
 
     fn get_table_names(connection: &mut Connection) -> Vec<String> {
