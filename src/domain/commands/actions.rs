@@ -80,7 +80,6 @@ mod tests {
     use crate::app_config::TemplateConfig;
     use crate::app_context::AppContext;
     use crate::domain::adapters::CheckoutStatus;
-    use crate::migrations::DefaultConfig;
     use crate::migrations::{db_migrations, MigrationContext};
 
     use super::*;
