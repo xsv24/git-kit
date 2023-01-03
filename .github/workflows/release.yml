@@ -52,5 +52,6 @@ jobs:
       - run: |
           TAG_VERSION=$(echo $GITHUB_REF | cut -d '/' -f 3)
           cargo release version "$TAG_VERSION" --no-confirm --execute
-      - run: cargo publish --token "$CARGO_TOKEN"
+      # Publish and allow dirty since the Cargo.toml version is changed.
+      - run: cargo publish --token "$CARGO_TOKEN" --allow-dirty
     needs: [build, publish-dry]
