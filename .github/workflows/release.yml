@@ -35,6 +35,8 @@ jobs:
 
   publish:
     runs-on: ubuntu-latest
+    env:
+      CARGO_TOKEN: ${{ secrets.CARGO_TOKEN }}
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -49,5 +51,6 @@ jobs:
           args: cargo-release
       - run: |
           TAG_VERSION=$(echo $GITHUB_REF | cut -d '/' -f 3)
-          cargo release version "$TAG_VERSION" --execute
+          cargo release version "$TAG_VERSION" --no-confirm --execute
+      - run: cargo publish --token "$CARGO_TOKEN"
     needs: [build, publish-dry]
