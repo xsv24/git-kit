@@ -1,0 +1,54 @@
+on:
+  push:
+    branches: [main]
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+name: Release and publish
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+
+  publish-dry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: publish
+          args: --dry-run
+
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          # Allows us to use the git tag version as the package version
+          command: install
+          args: cargo-release
+      - run: |
+          TAG_VERSION=$(echo $GITHUB_REF | cut -d '/' -f 3)
+          cargo release --version "$TAG_VERSION"
+    needs: [build, publish-dry]
