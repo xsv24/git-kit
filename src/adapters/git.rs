@@ -78,6 +78,8 @@ impl adapters::Git for Git {
         template: &Path,
         completed: CommitMsgStatus,
     ) -> anyhow::Result<()> {
+        log::info!("commit template with CommitMsgStatus: '{:?}'", completed);
+
         let template = template
             .as_os_str()
             .to_str()
@@ -88,6 +90,7 @@ impl adapters::Git for Git {
         // Pre-cautionary measure encase 'message' is provided but still matches template exactly.
         // Otherwise git will just abort the commit if theres no difference / change from the template.
         if completed == CommitMsgStatus::Completed {
+            log::info!("allowing an empty message on commit");
             args.push("--allow-empty-message");
         }
 
