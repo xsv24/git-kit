@@ -1,4 +1,4 @@
-use anyhow::{Context, Ok};
+use anyhow::Context;
 use std::{
     path::{Path, PathBuf},
     process::Command,
@@ -55,13 +55,6 @@ impl adapters::Git for Git {
         Ok(())
     }
 
-    fn commit(&self, msg: &str) -> anyhow::Result<()> {
-        log::info!("git commit with message '{}'", msg);
-        Git::command(&["commit", "-m", msg, "-e"]).status()?;
-
-        Ok(())
-    }
-
     fn root_directory(&self) -> anyhow::Result<PathBuf> {
         let dir = Git::command(&["rev-parse", "--show-toplevel"]).try_convert()?;
         log::info!("git root directory {}", dir);
@@ -70,7 +63,8 @@ impl adapters::Git for Git {
     }
 
     fn template_file_path(&self) -> anyhow::Result<PathBuf> {
-        // Create a template file and store in the .git directory
+        // Template file and stored in the .git directory to avoid users having to adding to their .gitignore
+        // In future maybe we could make our own .git-kit dir to house config / templates along with this.
         let path = self
             .root_directory()?
             .join(".git")

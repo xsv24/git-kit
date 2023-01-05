@@ -20,9 +20,6 @@ pub trait Git {
     /// Checkout an existing branch of create a new branch if not.
     fn checkout(&self, name: &str, status: CheckoutStatus) -> anyhow::Result<()>;
 
-    /// Commit changes and open editor with the template.
-    fn commit(&self, msg: &str) -> anyhow::Result<()>;
-
     /// Get the commit file path for the current repository.
     fn template_file_path(&self) -> anyhow::Result<PathBuf>;
 
