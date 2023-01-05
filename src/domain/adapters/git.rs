@@ -6,6 +6,12 @@ pub enum CheckoutStatus {
     Existing,
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub enum CommitMsgStatus {
+    InComplete,
+    Completed,
+}
+
 /// Used to abstract cli git commands for testing.
 pub trait Git {
     /// Get the root directory of the current git repo.
@@ -24,5 +30,9 @@ pub trait Git {
     fn template_file_path(&self) -> anyhow::Result<PathBuf>;
 
     /// Commit changes and open and editor with template file.
-    fn commit_with_template(&self, template: &Path) -> anyhow::Result<()>;
+    fn commit_with_template(
+        &self,
+        template: &Path,
+        completed: CommitMsgStatus,
+    ) -> anyhow::Result<()>;
 }

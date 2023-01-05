@@ -2,9 +2,10 @@ use crate::{
     app_context::AppContext,
     cli::{checkout, commit, context},
     domain::{
-        adapters::{CheckoutStatus, Git, Store},
+        adapters::{CheckoutStatus, CommitMsgStatus, Git, Store},
         models::Branch,
     },
+    utils::string::OptionStr,
 };
 
 use super::Actor;
@@ -62,7 +63,16 @@ impl<'a, C: Git, S: Store> Actor for Actions<'a, C, S> {
         let template_file = self.context.git.template_file_path()?;
         std::fs::write(&template_file, &contents)?;
 
-        self.context.git.commit_with_template(&template_file)?;
+        // Pre-cautionary measure encase 'message' is provided but still matches template exactly.
+        // Otherwise git will just abort the commit if theres no difference / change from the template.
+        let commit_msg_complete = match args.message.none_if_empty() {
+            Some(_) => CommitMsgStatus::Completed,
+            None => CommitMsgStatus::InComplete,
+        };
+
+        self.context
+            .git
+            .commit_with_template(&template_file, commit_msg_complete)?;
 
         Ok(contents)
     }

@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{
-    domain::adapters::{self, CheckoutStatus},
+    domain::adapters::{self, CheckoutStatus, CommitMsgStatus},
     utils::TryConvert,
 };
 
@@ -73,12 +73,25 @@ impl adapters::Git for Git {
         Ok(path)
     }
 
-    fn commit_with_template(&self, template: &Path) -> anyhow::Result<()> {
+    fn commit_with_template(
+        &self,
+        template: &Path,
+        completed: CommitMsgStatus,
+    ) -> anyhow::Result<()> {
         let template = template
             .as_os_str()
             .to_str()
             .context("Failed to convert path to str.")?;
-        Git::command(&["commit", "--template", template]).status()?;
+
+        let mut args = vec!["commit", "--template", template];
+
+        // Pre-cautionary measure encase 'message' is provided but still matches template exactly.
+        // Otherwise git will just abort the commit if theres no difference / change from the template.
+        if completed == CommitMsgStatus::Completed {
+            args.push("--allow-empty-message");
+        }
+
+        Git::command(&args).status()?;
 
         Ok(())
     }
