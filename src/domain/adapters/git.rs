@@ -18,10 +18,10 @@ pub trait Git {
     fn root_directory(&self) -> anyhow::Result<PathBuf>;
 
     /// Get the current git repository name.
-    fn get_repo_name(&self) -> anyhow::Result<String>;
+    fn repository_name(&self) -> anyhow::Result<String>;
 
     /// Get the current checked out branch name.
-    fn get_branch_name(&self) -> anyhow::Result<String>;
+    fn branch_name(&self) -> anyhow::Result<String>;
 
     /// Checkout an existing branch of create a new branch if not.
     fn checkout(&self, name: &str, status: CheckoutStatus) -> anyhow::Result<()>;

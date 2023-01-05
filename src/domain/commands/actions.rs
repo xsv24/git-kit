@@ -24,8 +24,8 @@ impl<'a, C: Git, S: Store> Actor for Actions<'a, C, S> {
     fn current(&self, args: context::Arguments) -> anyhow::Result<Branch> {
         // We want to store the branch name against and ticket number
         // So whenever we commit we get the ticket number from the branch
-        let repo_name = self.context.git.get_repo_name()?;
-        let branch_name = self.context.git.get_branch_name()?;
+        let repo_name = self.context.git.repository_name()?;
+        let branch_name = self.context.git.branch_name()?;
 
         let branch = Branch::new(&branch_name, &repo_name, args.ticket, args.link, args.scope)?;
         self.context.store.persist_branch(&branch)?;
@@ -48,7 +48,7 @@ impl<'a, C: Git, S: Store> Actor for Actions<'a, C, S> {
 
         // We want to store the branch name against and ticket number
         // So whenever we commit we get the ticket number from the branch
-        let repo_name = self.context.git.get_repo_name()?;
+        let repo_name = self.context.git.repository_name()?;
         let branch = Branch::new(&args.name, &repo_name, args.ticket, args.link, args.scope)?;
         self.context.store.persist_branch(&branch)?;
 
@@ -431,8 +431,8 @@ mod tests {
         let context = fake_context(GitCommandMock::fake(), config)?;
         let actions = Actions::new(&context);
 
-        let branch_name = Some(context.git.get_branch_name()?);
-        let repo_name = Some(context.git.get_repo_name()?);
+        let branch_name = Some(context.git.branch_name()?);
+        let repo_name = Some(context.git.repository_name()?);
         let ticket = None;
         let branch = Branch {
             link: Some(Faker.fake()),
@@ -527,14 +527,14 @@ mod tests {
     }
 
     impl Git for GitCommandMock {
-        fn get_repo_name(&self) -> anyhow::Result<String> {
+        fn repository_name(&self) -> anyhow::Result<String> {
             self.repo
                 .as_ref()
                 .map(|s| s.to_owned())
                 .map_err(|e| anyhow!(e.to_owned()))
         }
 
-        fn get_branch_name(&self) -> anyhow::Result<String> {
+        fn branch_name(&self) -> anyhow::Result<String> {
             self.branch_name
                 .as_ref()
                 .map(|s| s.to_owned())

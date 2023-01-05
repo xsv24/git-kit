@@ -22,7 +22,7 @@ impl Git {
 }
 
 impl adapters::Git for Git {
-    fn get_repo_name(&self) -> anyhow::Result<String> {
+    fn repository_name(&self) -> anyhow::Result<String> {
         let repo_dir = self.root_directory()?.try_convert()?;
 
         let repo = repo_dir
@@ -35,7 +35,7 @@ impl adapters::Git for Git {
         Ok(repo.trim().into())
     }
 
-    fn get_branch_name(&self) -> anyhow::Result<String> {
+    fn branch_name(&self) -> anyhow::Result<String> {
         let branch: String = Git::command(&["branch", "--show-current"]).try_convert()?;
         log::info!("current git branch name '{}'", branch);
 
@@ -111,7 +111,7 @@ mod tests {
         let git = Git;
 
         // TODO: Find a more testable approach to check stdout maybe?
-        assert_eq!(git.get_repo_name()?, "git-kit");
+        assert_eq!(git.repository_name()?, "git-kit");
 
         Ok(())
     }
