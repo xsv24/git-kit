@@ -71,11 +71,14 @@ impl<'a, C: Git, S: Store> Actor for Actions<'a, C, S> {
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
+    use std::env::temp_dir;
+    use std::path::Path;
     use std::path::PathBuf;
 
     use anyhow::anyhow;
     use fake::{Fake, Faker};
     use rusqlite::Connection;
+    use uuid::Uuid;
 
     use crate::adapters::sqlite::Sqlite;
     use crate::app_config::AppConfig;
@@ -478,7 +481,8 @@ mod tests {
         repo: Result<String, String>,
         branch_name: Result<String, String>,
         checkout_res: fn(&str, CheckoutStatus) -> anyhow::Result<()>,
-        commit_res: fn(&str) -> anyhow::Result<()>,
+        commit_res: fn(&Path) -> anyhow::Result<()>,
+        template_file_path: fn() -> anyhow::Result<PathBuf>,
     }
 
     impl GitCommandMock {
@@ -488,6 +492,10 @@ mod tests {
                 branch_name: Ok(Faker.fake()),
                 checkout_res: |_, _| Ok(()),
                 commit_res: |_| Ok(()),
+                template_file_path: || {
+                    let temp_file = temp_dir().join(Uuid::new_v4().to_string());
+                    Ok(temp_file)
+                },
             }
         }
     }
@@ -511,12 +519,16 @@ mod tests {
             (self.checkout_res)(name, status)
         }
 
-        fn commit(&self, msg: &str) -> anyhow::Result<()> {
-            (self.commit_res)(msg)
+        fn root_directory(&self) -> anyhow::Result<PathBuf> {
+            panic!("Did not expect Git 'root_directory' to be called.");
         }
 
-        fn root_directory(&self) -> anyhow::Result<PathBuf> {
-            todo!()
+        fn template_file_path(&self) -> anyhow::Result<PathBuf> {
+            (self.template_file_path)()
+        }
+
+        fn commit_with_template(&self, template: &std::path::Path) -> anyhow::Result<()> {
+            (self.commit_res)(template)
         }
     }
 

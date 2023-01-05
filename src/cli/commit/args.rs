@@ -135,15 +135,19 @@ mod tests {
         }
 
         fn checkout(&self, _name: &str, _status: CheckoutStatus) -> anyhow::Result<()> {
-            todo!()
-        }
-
-        fn commit(&self, _msg: &str) -> anyhow::Result<()> {
-            todo!()
+            panic!("Did not expect Git 'checkout' to be called");
         }
 
         fn root_directory(&self) -> anyhow::Result<PathBuf> {
-            todo!()
+            panic!("Did not expect Git 'root_directory' to be called");
+        }
+
+        fn template_file_path(&self) -> anyhow::Result<PathBuf> {
+            panic!("Did not expect Git 'template_file_path' to be called");
+        }
+
+        fn commit_with_template(&self, _: &std::path::Path) -> anyhow::Result<()> {
+            panic!("Did not expect Git 'commit_with_template' to be called");
         }
     }
 
