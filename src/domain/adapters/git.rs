@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum CheckoutStatus {
@@ -22,4 +22,10 @@ pub trait Git {
 
     /// Commit changes and open editor with the template.
     fn commit(&self, msg: &str) -> anyhow::Result<()>;
+
+    /// Get the commit file path for the current repository.
+    fn template_file_path(&self) -> anyhow::Result<PathBuf>;
+
+    /// Commit changes and open and editor with template file.
+    fn commit_with_template(&self, template: &Path) -> anyhow::Result<()>;
 }

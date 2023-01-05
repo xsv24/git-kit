@@ -59,7 +59,10 @@ impl<'a, C: Git, S: Store> Actor for Actions<'a, C, S> {
 
         let contents = args.commit_message(config.content.clone(), self.context)?;
 
-        self.context.git.commit(&contents)?;
+        let template_file = self.context.git.template_file_path()?;
+        std::fs::write(&template_file, &contents)?;
+
+        self.context.git.commit_with_template(&template_file)?;
 
         Ok(contents)
     }

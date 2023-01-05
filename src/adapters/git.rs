@@ -1,4 +1,4 @@
-use anyhow::Context;
+use anyhow::{Context, Ok};
 use std::{
     path::{Path, PathBuf},
     process::Command,
@@ -67,6 +67,26 @@ impl adapters::Git for Git {
         log::info!("git root directory {}", dir);
 
         Ok(Path::new(dir.trim()).to_owned())
+    }
+
+    fn template_file_path(&self) -> anyhow::Result<PathBuf> {
+        // Create a template file and store in the .git directory
+        let path = self
+            .root_directory()?
+            .join(".git")
+            .join("GIT_KIT_COMMIT_TEMPLATE");
+
+        Ok(path)
+    }
+
+    fn commit_with_template(&self, template: &Path) -> anyhow::Result<()> {
+        let template = template
+            .as_os_str()
+            .to_str()
+            .context("Failed to convert path to str.")?;
+        Git::command(&["commit", "--template", template]).status()?;
+
+        Ok(())
     }
 }
 
