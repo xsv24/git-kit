@@ -329,7 +329,15 @@ mod tests {
             },
         };
 
-        let context = fake_context(GitCommandMock::fake(), config)?;
+        let git_mock = GitCommandMock {
+            commit_res: |_, complete| {
+                assert_eq!(CommitMsgStatus::Completed, complete);
+                Ok(())
+            },
+            ..GitCommandMock::fake()
+        };
+
+        let context = fake_context(git_mock, config)?;
         let actions = Actions::new(&context);
 
         let args = commit::Arguments {
@@ -371,7 +379,15 @@ mod tests {
             },
         };
 
-        let context = fake_context(GitCommandMock::fake(), config)?;
+        let git_mock = GitCommandMock {
+            commit_res: |_, complete| {
+                assert_eq!(CommitMsgStatus::InComplete, complete);
+                Ok(())
+            },
+            ..GitCommandMock::fake()
+        };
+
+        let context = fake_context(git_mock, config)?;
         let actions = Actions::new(&context);
 
         let args = commit::Arguments {
@@ -491,7 +507,7 @@ mod tests {
         repo: Result<String, String>,
         branch_name: Result<String, String>,
         checkout_res: fn(&str, CheckoutStatus) -> anyhow::Result<()>,
-        commit_res: fn(&Path) -> anyhow::Result<()>,
+        commit_res: fn(&Path, CommitMsgStatus) -> anyhow::Result<()>,
         template_file_path: fn() -> anyhow::Result<PathBuf>,
     }
 
@@ -501,7 +517,7 @@ mod tests {
                 repo: Ok(Faker.fake()),
                 branch_name: Ok(Faker.fake()),
                 checkout_res: |_, _| Ok(()),
-                commit_res: |_| Ok(()),
+                commit_res: |_, _| Ok(()),
                 template_file_path: || {
                     let temp_file = temp_dir().join(Uuid::new_v4().to_string());
                     Ok(temp_file)
@@ -537,8 +553,12 @@ mod tests {
             (self.template_file_path)()
         }
 
-        fn commit_with_template(&self, template: &std::path::Path) -> anyhow::Result<()> {
-            (self.commit_res)(template)
+        fn commit_with_template(
+            &self,
+            template: &Path,
+            complete: CommitMsgStatus,
+        ) -> anyhow::Result<()> {
+            (self.commit_res)(template, complete)
         }
     }
 

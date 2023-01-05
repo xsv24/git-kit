@@ -102,7 +102,10 @@ mod tests {
     use crate::{
         adapters::sqlite::Sqlite,
         app_config::{AppConfig, CommitConfig, TemplateConfig},
-        domain::{adapters::CheckoutStatus, models::Branch},
+        domain::{
+            adapters::{CheckoutStatus, CommitMsgStatus},
+            models::Branch,
+        },
         migrations::{db_migrations, MigrationContext},
     };
     use fake::{Fake, Faker};
@@ -146,7 +149,11 @@ mod tests {
             panic!("Did not expect Git 'template_file_path' to be called");
         }
 
-        fn commit_with_template(&self, _: &std::path::Path) -> anyhow::Result<()> {
+        fn commit_with_template(
+            &self,
+            _: &std::path::Path,
+            _: CommitMsgStatus,
+        ) -> anyhow::Result<()> {
             panic!("Did not expect Git 'commit_with_template' to be called");
         }
     }
