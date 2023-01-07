@@ -108,19 +108,19 @@ jobs:
       - name: Build archive
         shell: bash
         run: |
-          TAG_VERSION=$(echo $GITHUB_REF | cut -d '/' -f 3)
-          COMPRESSED="git-kit-${{ TAG_VERSION }}-${{ matrix.target }}"
+          tag_version=$(echo $GITHUB_REF | cut -d '/' -f 3)
+          compressed="git-kit-${{ tag_version }}-${{ matrix.target }}"
 
-          cp {README.md,LICENSE} "$COMPRESSED/"
+          cp {README.md,LICENSE} "$compressed/"
 
           if [ "${{ matrix.os }}" = "windows-2022" ]; then
-            cp "target/${{ matrix.target }}/release/$BIN_NAME.exe" "$COMPRESSED/"
-            7z a "$COMPRESSED.zip" "$COMPRESSED"
-            echo "ASSET=$COMPRESSED.zip" >> $GITHUB_ENV
+            cp "target/${{ matrix.target }}/release/$BIN_NAME.exe" "$compressed/"
+            7z a "$compressed.zip" "$compressed"
+            echo "ASSET=$compressed.zip" >> $GITHUB_ENV
           else
-            cp "target/${{ matrix.target }}/release/$BIN_NAME" "$COMPRESSED/"
-            tar czf "$COMPRESSED.tar.gz" "$COMPRESSED"
-            echo "ASSET=$COMPRESSED.tar.gz" >> $GITHUB_ENV
+            cp "target/${{ matrix.target }}/release/$BIN_NAME" "$compressed/"
+            tar czf "$compressed.tar.gz" "$compressed"
+            echo "ASSET=$compressed.tar.gz" >> $GITHUB_ENV
           fi
 
       - uses: actions/upload-artifact@v2.2.4
