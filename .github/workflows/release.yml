@@ -18,8 +18,6 @@ jobs:
         run: |
           echo "TAG_VERSION=$(echo $GITHUB_REF | cut -d '/' -f 3)" >> $GITHUB_ENV
           echo "version is: ${{ env.TAG_VERSION }}"
-        with:
-          tag_version: ${{ env.TAG_VERSION }}
 
   # create-release:
   #   name: create-release
