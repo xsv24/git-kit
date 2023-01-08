@@ -135,7 +135,7 @@ jobs:
       - uses: actions/upload-artifact@v2.2.4
         with:
           name: bins-${{ matrix.build }}
-          path: dist
+          path: ${{ env.ASSET }}
 
   cargo-publish-dry:
     runs-on: ubuntu-latest
