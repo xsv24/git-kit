@@ -54,7 +54,7 @@ fn copy_or_replace(source_path: &PathBuf, target_path: &PathBuf) -> anyhow::Resu
     match fs::read_dir(source_path) {
         Ok(entry_iter) => {
             fs::create_dir_all(target_path)
-                .with_context(|| format!("Failed to create dir {}", target_path.display()))?;
+                .with_context(|| format!("Failed to create dir {:?}", target_path.as_os_str()))?;
 
             for dir in entry_iter {
                 let entry = dir?;

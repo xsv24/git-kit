@@ -46,23 +46,23 @@ jobs:
       matrix:
         build:
           [
-            linux-x86,
-            linux-arm,
+            # linux-x86,
+            # linux-arm,
             macos-x86,
             macos-arm,
-            win-msvc,
-            win-gnu,
-            win32-msvc,
+            # win-msvc,
+            # win-gnu,
+            # win32-msvc,
           ]
         # List of OS versions https://github.com/actions/runner-images
         include:
-          - build: linux-x86
-            os: ubuntu-22.04
-            target: x86_64-unknown-linux-musl
+          # - build: linux-x86
+          #   os: ubuntu-22.04
+          #   target: x86_64-unknown-linux-musl
 
-          - build: linux-arm
-            os: ubuntu-22.04
-            target: arm-unknown-linux-gnueabihf
+          # - build: linux-arm
+          #   os: ubuntu-22.04
+          #   target: arm-unknown-linux-gnueabihf
 
           - build: macos-x86
             os: macos-12
@@ -72,17 +72,17 @@ jobs:
             os: macos-12
             target: aarch64-apple-darwin
 
-          - build: win-msvc
-            os: windows-2022
-            target: x86_64-pc-windows-msvc
+          # - build: win-msvc
+          #   os: windows-2022
+          #   target: x86_64-pc-windows-msvc
 
-          - build: win-gnu
-            os: windows-2022
-            target: x86_64-pc-windows-gnu
+          # - build: win-gnu
+          #   os: windows-2022
+          #   target: x86_64-pc-windows-gnu
 
-          - build: win32-msvc
-            os: windows-2022
-            target: i686-pc-windows-msvc
+          # - build: win32-msvc
+          #   os: windows-2022
+          #   target: i686-pc-windows-msvc
 
     steps:
       - name: Checkout sources
@@ -119,7 +119,7 @@ jobs:
         shell: bash
         run: |
           compressed="git-kit-${{ needs.prep.outputs.tag_version }}-${{ matrix.target }}"
-
+          mkdir $compressed
           cp {README.md,LICENSE} "$compressed/"
 
           if [ "${{ matrix.os }}" = "windows-2022" ]; then
