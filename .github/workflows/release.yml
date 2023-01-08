@@ -3,49 +3,49 @@ on:
     tags:
       - "[0-9]+.[0-9]+.[0-9]+"
 
-name: Release and publish
+name: release
 
 env:
   BIN_NAME: git-kit
 
 jobs:
-  prep:
-    runs-on: ubuntu-latest
+  # prep:
+  #   runs-on: ubuntu-latest
+  #   outputs:
+  #     tag_version: ${{ env.TAG_VERSION }}
+  #   steps:
+  #     - name: Environment variables
+  #       run: |
+  #         echo "TAG_VERSION=$(echo $GITHUB_REF | cut -d '/' -f 3)" >> $GITHUB_ENV
+  #         echo "version is: ${{ env.TAG_VERSION }}"
+
+  create-release:
+    name: create-release
+    runs-on: ubuntu-22.04
     outputs:
+      upload_url: ${{ steps.release.outputs.upload_url }}
       tag_version: ${{ env.TAG_VERSION }}
     steps:
       - name: Environment variables
         run: |
           echo "TAG_VERSION=$(echo $GITHUB_REF | cut -d '/' -f 3)" >> $GITHUB_ENV
           echo "version is: ${{ env.TAG_VERSION }}"
-
-  # create-release:
-  #   name: create-release
-  #   runs-on: ubuntu-22.04
-  #   outputs:
-  #     upload_url: ${{ steps.release.outputs.upload_url }}
-  #   steps:
-  #     - name: Get Git Tag Version
-  #       run: |
-  #         echo "TAG_VERSION=$(echo $GITHUB_REF | cut -d '/' -f 3)" >> $GITHUB_ENV
-  #         echo "version is: ${{ env.TAG_VERSION }}"
-  #     - name: Create GitHub release
-  #       id: release
-  #       uses: actions/create-release@v1
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #       with:
-  #         tag_name: ${{ env.TAG_VERSION }}
-  #         release_name: ${{ env.TAG_VERSION }}
+      - name: Create GitHub release
+        id: release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.TAG_VERSION }}
+          release_name: ${{ env.TAG_VERSION }}
 
   build:
     name: Build
     runs-on: ${{ matrix.os }}
-    needs: [ 'prep' ]
+    needs: ["create-release"]
     strategy:
       matrix:
-        build:
-          [
+        build: [
             # linux-x86,
             # linux-arm,
             macos-x86,
@@ -132,10 +132,20 @@ jobs:
             echo "ASSET=$compressed.tar.gz" >> $GITHUB_ENV
           fi
 
-      - uses: actions/upload-artifact@v2.2.4
+      # - uses: actions/upload-artifact@v2.2.4
+      #   with:
+      #     name: bins-${{ matrix.build }}
+      #     path: ${{ env.ASSET }}
+
+      - name: Upload release archive
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: bins-${{ matrix.build }}
-          path: ${{ env.ASSET }}
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ${{ env.ASSET }}
+          asset_name: ${{ env.ASSET }}
+          asset_content_type: application/octet-stream
 
   cargo-publish-dry:
     runs-on: ubuntu-latest
