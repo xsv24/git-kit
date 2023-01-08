@@ -9,6 +9,18 @@ env:
   BIN_NAME: git-kit
 
 jobs:
+  prep:
+    runs-on: ubuntu-latest
+    outputs:
+      tag_version: ${{ env.TAG_VERSION }}
+    steps:
+      - name: Environment variables
+        run: |
+          echo "TAG_VERSION=$(echo $GITHUB_REF | cut -d '/' -f 3)" >> $GITHUB_ENV
+          echo "version is: ${{ env.TAG_VERSION }}"
+        with:
+          tag_version: ${{ env.TAG_VERSION }}
+
   # create-release:
   #   name: create-release
   #   runs-on: ubuntu-22.04
@@ -108,8 +120,7 @@ jobs:
       - name: Build archive
         shell: bash
         run: |
-          tag_version=$(echo $GITHUB_REF | cut -d '/' -f 3)
-          compressed="git-kit-${{ tag_version }}-${{ matrix.target }}"
+          compressed="git-kit-${{ needs.prep.outputs.tag_version }}-${{ matrix.target }}"
 
           cp {README.md,LICENSE} "$compressed/"
 
