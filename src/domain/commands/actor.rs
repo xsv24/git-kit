@@ -1,7 +1,9 @@
 use crate::{
-    cli::{checkout, commit, context},
+    cli::{checkout, context},
     domain::models::Branch,
 };
+
+use super::CommitArgs;
 
 pub trait Actor {
     /// Actions on a context update on the current branch.
@@ -11,5 +13,5 @@ pub trait Actor {
     fn checkout(&self, args: checkout::Arguments) -> anyhow::Result<Branch>;
 
     /// Actions on a commit.
-    fn commit(&self, args: commit::Arguments) -> anyhow::Result<String>;
+    fn commit(&self, args: CommitArgs) -> anyhow::Result<String>;
 }
