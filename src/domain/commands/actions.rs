@@ -1,6 +1,6 @@
 use crate::{
     app_context::AppContext,
-    cli::{checkout, commit, context},
+    cli::{checkout, context},
     domain::{
         adapters::{CheckoutStatus, CommitMsgStatus, Git, Store},
         models::Branch,
@@ -8,7 +8,7 @@ use crate::{
     utils::string::OptionStr,
 };
 
-use super::Actor;
+use super::{Actor, CommitArgs};
 
 pub struct Actions<'a, C: Git, S: Store> {
     context: &'a AppContext<C, S>,
@@ -55,10 +55,19 @@ impl<'a, C: Git, S: Store> Actor for Actions<'a, C, S> {
         Ok(branch)
     }
 
-    fn commit(&self, args: commit::Arguments) -> anyhow::Result<String> {
+    fn commit(&self, args: CommitArgs) -> anyhow::Result<String> {
         let config = self.context.config.get_template_config(&args.template)?;
 
-        let contents = args.commit_message(config.content.clone(), self.context)?;
+        let branch = self
+            .context
+            .store
+            .get_branch(
+                &self.context.git.branch_name()?,
+                &self.context.git.repository_name()?,
+            )
+            .ok();
+
+        let contents = args.commit_message(config.content.clone(), branch)?;
 
         let template_file = self.context.git.template_file_path()?;
         std::fs::write(&template_file, &contents)?;
@@ -340,7 +349,7 @@ mod tests {
         let context = fake_context(git_mock, config)?;
         let actions = Actions::new(&context);
 
-        let args = commit::Arguments {
+        let args = CommitArgs {
             ticket: Some(Faker.fake()),
             message: Some(Faker.fake()),
             scope: Some(Faker.fake()),
@@ -390,7 +399,7 @@ mod tests {
         let context = fake_context(git_mock, config)?;
         let actions = Actions::new(&context);
 
-        let args = commit::Arguments {
+        let args = CommitArgs {
             ticket: None,
             message: None,
             scope: None,
@@ -421,7 +430,7 @@ mod tests {
             },
         };
 
-        let args = commit::Arguments {
+        let args = CommitArgs {
             template,
             message: Some(Faker.fake()),
             ticket: None,
@@ -588,8 +597,8 @@ mod tests {
         }
     }
 
-    fn fake_commit_args() -> commit::Arguments {
-        commit::Arguments {
+    fn fake_commit_args() -> CommitArgs {
+        CommitArgs {
             template: Faker.fake(),
             ticket: Faker.fake(),
             message: Faker.fake(),

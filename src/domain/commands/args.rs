@@ -37,21 +37,14 @@ impl CommitArgs {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, path::PathBuf};
-
-    use crate::{
-        adapters::sqlite::Sqlite,
-        app_config::{AppConfig, CommitConfig, TemplateConfig},
-        domain::{
-            adapters::{CheckoutStatus, CommitMsgStatus},
-            models::Branch,
-        },
-        migrations::{db_migrations, MigrationContext},
-    };
-    use fake::{Fake, Faker};
-    use rusqlite::Connection;
+    use fake::{Faker, Fake};
 
     use super::*;
+    use crate::{
+        app_config::{AppConfig, CommitConfig, TemplateConfig},
+        domain::models::Branch,
+    };
+    use std::collections::HashMap;
 
     #[derive(Clone)]
     struct TestCommand {
@@ -68,54 +61,17 @@ mod tests {
         }
     }
 
-    impl Git for TestCommand {
-        fn repository_name(&self) -> anyhow::Result<String> {
-            Ok(self.repo.to_owned())
-        }
-
-        fn branch_name(&self) -> anyhow::Result<String> {
-            Ok(self.branch_name.to_owned())
-        }
-
-        fn checkout(&self, _name: &str, _status: CheckoutStatus) -> anyhow::Result<()> {
-            panic!("Did not expect Git 'checkout' to be called");
-        }
-
-        fn root_directory(&self) -> anyhow::Result<PathBuf> {
-            panic!("Did not expect Git 'root_directory' to be called");
-        }
-
-        fn template_file_path(&self) -> anyhow::Result<PathBuf> {
-            panic!("Did not expect Git 'template_file_path' to be called");
-        }
-
-        fn commit_with_template(
-            &self,
-            _: &std::path::Path,
-            _: CommitMsgStatus,
-        ) -> anyhow::Result<()> {
-            panic!("Did not expect Git 'commit_with_template' to be called");
-        }
-    }
-
     #[test]
     fn empty_ticket_num_removes_square_brackets() -> anyhow::Result<()> {
-        let context = AppContext {
-            store: Sqlite::new(setup_db(None)?)?,
-            git: TestCommand::fake(),
-            config: fake_config(),
-        };
-
         let args = CommitArgs {
             ticket: Some("".into()),
             message: Some(Faker.fake()),
             ..fake_args()
         };
 
-        let actual = args.commit_message("{ticket_num} {message}".into(), &context)?;
+        let actual = args.commit_message("{ticket_num} {message}".into(), None)?;
         let expected = format!("{}", args.message.unwrap());
 
-        context.close()?;
         assert_eq!(actual, expected);
 
         Ok(())
@@ -123,12 +79,6 @@ mod tests {
 
     #[test]
     fn empty_scope_removes_parentheses() -> anyhow::Result<()> {
-        let context = AppContext {
-            store: Sqlite::new(setup_db(None)?)?,
-            git: TestCommand::fake(),
-            config: fake_config(),
-        };
-
         let args = CommitArgs {
             message: Some(Faker.fake()),
             scope: Some("".into()),
@@ -136,10 +86,9 @@ mod tests {
             ..fake_args()
         };
 
-        let actual = args.commit_message("({scope}) [{ticket_num}] {message}".into(), &context)?;
+        let actual = args.commit_message("({scope}) [{ticket_num}] {message}".into(), None)?;
         let expected = format!("[{}] {}", args.ticket.unwrap(), args.message.unwrap());
 
-        context.close()?;
         assert_eq!(actual, expected);
 
         Ok(())
@@ -148,22 +97,15 @@ mod tests {
     #[test]
     fn when_ticket_num_is_empty_square_brackets_are_removed() -> anyhow::Result<()> {
         for ticket in [Some("".into()), Some("   ".into()), None] {
-            let context = AppContext {
-                store: Sqlite::new(setup_db(None)?)?,
-                git: TestCommand::fake(),
-                config: fake_config(),
-            };
-
             let args = CommitArgs {
                 ticket,
                 message: Some(Faker.fake()),
                 ..fake_args()
             };
 
-            let actual = args.commit_message("[{ticket_num}] {message}".into(), &context)?;
+            let actual = args.commit_message("[{ticket_num}] {message}".into(), None)?;
             let expected = format!("{}", args.message.unwrap());
 
-            context.close()?;
             assert_eq!(actual, expected);
         }
 
@@ -172,12 +114,6 @@ mod tests {
 
     #[test]
     fn commit_message_with_both_args_are_populated() -> anyhow::Result<()> {
-        let context = AppContext {
-            store: Sqlite::new(setup_db(None)?)?,
-            git: TestCommand::fake(),
-            config: fake_config(),
-        };
-
         let args = CommitArgs {
             template: Faker.fake(),
             ticket: Some(Faker.fake()),
@@ -185,10 +121,9 @@ mod tests {
             ..fake_args()
         };
 
-        let actual = args.commit_message("[{ticket_num}] {message}".into(), &context)?;
+        let actual = args.commit_message("[{ticket_num}] {message}".into(), None)?;
         let expected = format!("[{}] {}", args.ticket.unwrap(), args.message.unwrap());
 
-        context.close()?;
         assert_eq!(actual, expected);
 
         Ok(())
@@ -196,22 +131,15 @@ mod tests {
 
     #[test]
     fn commit_template_message_is_replaced_with_empty_str() -> anyhow::Result<()> {
-        let context = AppContext {
-            store: Sqlite::new(setup_db(None)?)?,
-            git: TestCommand::fake(),
-            config: fake_config(),
-        };
-
         let args = CommitArgs {
             ticket: Some(Faker.fake()),
             message: None,
             ..fake_args()
         };
 
-        let actual = args.commit_message("{ticket_num} {message}".into(), &context)?;
+        let actual = args.commit_message("{ticket_num} {message}".into(), None)?;
         let expected = format!("{}", args.ticket.unwrap());
 
-        context.close()?;
         assert_eq!(expected.trim(), actual);
 
         Ok(())
@@ -220,12 +148,6 @@ mod tests {
     #[test]
     fn commit_template_with_empty_brackets_such_as_markdown_checklist_are_not_removed(
     ) -> anyhow::Result<()> {
-        let context = AppContext {
-            store: Sqlite::new(setup_db(None)?)?,
-            git: TestCommand::fake(),
-            config: fake_config(),
-        };
-
         let args = CommitArgs {
             message: Some(Faker.fake()),
             ticket: None,
@@ -235,11 +157,10 @@ mod tests {
 
         let actual = args.commit_message(
             "fix({scope}): [{ticket_num}] {message}\n- done? [ ]".into(),
-            &context,
+            None,
         )?;
         let expected = format!("fix: {}\n- done? [ ]", args.message.unwrap());
 
-        context.close()?;
         assert_eq!(expected.trim(), actual);
         Ok(())
     }
@@ -250,25 +171,18 @@ mod tests {
 
         let branch = Branch::new(&commands.branch_name, &commands.repo, None, None, None)?;
 
-        let context = AppContext {
-            store: Sqlite::new(setup_db(Some(&branch))?)?,
-            git: commands.clone(),
-            config: fake_config(),
-        };
-
         let args = CommitArgs {
             ticket: None,
             ..fake_args()
         };
 
-        let actual = args.commit_message("[{ticket_num}] {message}".into(), &context)?;
+        let actual = args.commit_message("[{ticket_num}] {message}".into(), Some(branch))?;
         let expected = format!(
             "[{}] {}",
             &commands.branch_name,
             args.message.unwrap_or_else(|| "".into())
         );
 
-        context.close()?;
         assert_eq!(expected.trim(), actual);
 
         Ok(())
@@ -413,33 +327,5 @@ mod tests {
                 templates: fake_template_config(),
             },
         }
-    }
-
-    fn setup_db(branch: Option<&Branch>) -> anyhow::Result<Connection> {
-        let mut conn = Connection::open_in_memory()?;
-
-        db_migrations(
-            &mut conn,
-            MigrationContext {
-                default_configs: None,
-                version: None,
-            },
-        )?;
-
-        if let Some(branch) = branch {
-            conn.execute(
-                "INSERT INTO branch (name, ticket, data, created, link, scope) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-                (
-                    &branch.name,
-                    &branch.ticket,
-                    &branch.data,
-                    branch.created.to_rfc3339(),
-                    &branch.link,
-                    &branch.scope
-                ),
-            )?;
-        }
-
-        Ok(conn)
     }
 }
