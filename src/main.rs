@@ -8,7 +8,7 @@ mod utils;
 
 use std::fmt::Debug;
 
-use cli::{checkout, commit, context, log::LogLevel, templates};
+use cli::{checkout, commit, context, log::LogLevel, select::SelectorFactory, templates};
 
 use adapters::{sqlite::Sqlite, Git};
 use anyhow::{Context, Ok};
@@ -84,12 +84,15 @@ fn main() -> anyhow::Result<()> {
 
     let mut context = cli.init()?;
     let actions = Actions::new(&context);
+    let selector = SelectorFactory::create();
 
     let result = match cli.commands {
         Commands::Checkout(args) => checkout::handler(&actions, args),
         Commands::Context(args) => context::handler(&actions, args),
-        Commands::Commit(args) => commit::handler(&actions, &context.config, args),
-        Commands::Config(args) => cli::config::handler(&mut context.store, &context.git, args),
+        Commands::Commit(args) => commit::handler(&actions, &context.config, args, selector),
+        Commands::Config(args) => {
+            cli::config::handler(&mut context.store, &context.git, args, selector)
+        }
         Commands::Templates => templates::handler(&context.config),
     };
 

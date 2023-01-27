@@ -55,12 +55,12 @@ impl AppConfig {
         Ok(connection)
     }
 
-    pub fn validate_template(&self, name: &str) -> clap::error::Result<()> {
+    pub fn validate_template(&self, name: String) -> clap::error::Result<String> {
         log::info!("validating template {}", name);
 
-        if self.commit.templates.contains_key(name) {
-            log::info!("template {} 👌", name);
-            Ok(())
+        if self.commit.templates.contains_key(&name) {
+            log::info!("template {} 👌", &name);
+            Ok(name)
         } else {
             // TODO: want a nice error message that shows the templates output
             Err(clap::Error::raw(

@@ -82,7 +82,7 @@ fn set<S: Store>(
 ) -> anyhow::Result<Config> {
     let name = match name {
         Some(name) => name,
-        None => prompt_configuration_select(store, selector)?
+        None => prompt_configuration_select(store, selector)?,
     };
 
     store.set_active_config(ConfigKey::from(name))
