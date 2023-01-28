@@ -7,10 +7,7 @@ use inquire::{
     Select,
 };
 
-pub struct SelectItem {
-    pub name: String,
-    pub description: Option<String>,
-}
+use crate::domain::adapters::prompt::{SelectItem, Prompter};
 
 impl Display for SelectItem {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -23,13 +20,9 @@ impl Display for SelectItem {
     }
 }
 
-pub trait SelectorPrompt {
-    fn prompt(&self, question: &str, options: Vec<SelectItem>) -> anyhow::Result<SelectItem>;
-}
+pub struct Prompt;
 
-struct SelectPrompt;
-
-impl SelectPrompt {
+impl Prompt {
     fn get_render_config() -> RenderConfig {
         // inquire::set_global_render_config(get_render_config());
         RenderConfig {
@@ -41,8 +34,8 @@ impl SelectPrompt {
     }
 }
 
-impl SelectorPrompt for SelectPrompt {
-    fn prompt(&self, question: &str, options: Vec<SelectItem>) -> anyhow::Result<SelectItem> {
+impl Prompter for Prompt {
+    fn select(&self, question: &str, options: Vec<SelectItem>) -> anyhow::Result<SelectItem> {
         let len = options.len();
         let select: Select<SelectItem> = Select {
             message: question,
@@ -57,13 +50,5 @@ impl SelectorPrompt for SelectPrompt {
         };
 
         Ok(select.prompt()?)
-    }
-}
-
-pub struct SelectorFactory;
-
-impl SelectorFactory {
-    pub fn create() -> Box<dyn SelectorPrompt> {
-        Box::new(SelectPrompt)
     }
 }

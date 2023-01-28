@@ -1,6 +1,6 @@
 use crate::AppConfig;
+use crate::domain::adapters::prompt::{Prompter, SelectItem};
 use crate::{
-    cli::select::{SelectItem, SelectorPrompt},
     domain::{
         adapters::{Git, Store},
         models::{Config, ConfigKey, ConfigStatus},
@@ -10,11 +10,11 @@ use crate::{
 use super::Arguments;
 use colored::Colorize;
 
-pub fn handler<S: Store, G: Git>(
+pub fn handler<S: Store, G: Git, P: Prompter>(
     store: &mut S,
     git: &G,
     arguments: Arguments,
-    selector: Box<dyn SelectorPrompt>,
+    prompt: P,
 ) -> anyhow::Result<()> {
     local_config_warning(git)?;
 
@@ -24,7 +24,7 @@ pub fn handler<S: Store, G: Git>(
             println!("🟢 {}", config.key.to_string().green());
         }
         Arguments::Set { name } => {
-            let config = set(store, name, selector)?;
+            let config = set(store, name, prompt)?;
             println!("🟢 {} (Active) ", config.key.to_string().green());
         }
         Arguments::Reset => {
@@ -57,32 +57,14 @@ fn add<S: Store>(store: &mut S, name: String, path: String) -> anyhow::Result<Co
     store.set_active_config(config.key)
 }
 
-fn prompt_configuration_select<S: Store>(
-    store: &mut S,
-    selector: Box<dyn SelectorPrompt>,
-) -> anyhow::Result<String> {
-    let configurations: Vec<SelectItem> = store
-        .get_configurations()?
-        .iter()
-        .map(|config| SelectItem {
-            name: config.key.clone().into(),
-            description: None,
-        })
-        .collect();
-
-    let selected = selector.prompt("Configuration:", configurations)?;
-
-    Ok(selected.name)
-}
-
-fn set<S: Store>(
+fn set<S: Store, P: Prompter>(
     store: &mut S,
     name: Option<String>,
-    selector: Box<dyn SelectorPrompt>,
+    prompter: P,
 ) -> anyhow::Result<Config> {
     let name = match name {
         Some(name) => name,
-        None => prompt_configuration_select(store, selector)?,
+        None => prompt_configuration_select(store, prompter)?,
     };
 
     store.set_active_config(ConfigKey::from(name))
@@ -107,4 +89,22 @@ fn local_config_warning<G: Git>(git: &G) -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+fn prompt_configuration_select<S: Store, P: Prompter>(
+    store: &mut S,
+    selector: P 
+) -> anyhow::Result<String> {
+    let configurations: Vec<SelectItem> = store
+        .get_configurations()?
+        .iter()
+        .map(|config| SelectItem {
+            name: config.key.clone().into(),
+            description: None,
+        })
+        .collect();
+
+    let selected = selector.select("Configuration:", configurations)?;
+
+    Ok(selected.name)
 }
