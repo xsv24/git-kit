@@ -1,17 +1,14 @@
-use crate::{
-    domain::{models::Branch, template::Templator},
-    utils::{merge, string::OptionStr},
-};
+use crate::{domain::{template::Templator, models::Branch}, utils::{string::OptionStr, merge}};
 
 #[derive(Debug, Clone)]
-pub struct CommitArgs {
+pub struct Commit {
     pub template: String,
     pub ticket: Option<String>,
     pub message: Option<String>,
     pub scope: Option<String>,
 }
 
-impl CommitArgs {
+impl Commit {
     pub fn commit_message(
         &self,
         template: String,
@@ -63,7 +60,7 @@ mod tests {
 
     #[test]
     fn empty_ticket_num_removes_square_brackets() -> anyhow::Result<()> {
-        let args = CommitArgs {
+        let args = Commit {
             ticket: Some("".into()),
             message: Some(Faker.fake()),
             ..fake_args()
@@ -79,7 +76,7 @@ mod tests {
 
     #[test]
     fn empty_scope_removes_parentheses() -> anyhow::Result<()> {
-        let args = CommitArgs {
+        let args = Commit {
             message: Some(Faker.fake()),
             scope: Some("".into()),
             ticket: Some(Faker.fake()),
@@ -97,7 +94,7 @@ mod tests {
     #[test]
     fn when_ticket_num_is_empty_square_brackets_are_removed() -> anyhow::Result<()> {
         for ticket in [Some("".into()), Some("   ".into()), None] {
-            let args = CommitArgs {
+            let args = Commit {
                 ticket,
                 message: Some(Faker.fake()),
                 ..fake_args()
@@ -114,7 +111,7 @@ mod tests {
 
     #[test]
     fn commit_message_with_both_args_are_populated() -> anyhow::Result<()> {
-        let args = CommitArgs {
+        let args = Commit {
             template: Faker.fake(),
             ticket: Some(Faker.fake()),
             message: Some(Faker.fake()),
@@ -131,7 +128,7 @@ mod tests {
 
     #[test]
     fn commit_template_message_is_replaced_with_empty_str() -> anyhow::Result<()> {
-        let args = CommitArgs {
+        let args = Commit {
             ticket: Some(Faker.fake()),
             message: None,
             ..fake_args()
@@ -148,7 +145,7 @@ mod tests {
     #[test]
     fn commit_template_with_empty_brackets_such_as_markdown_checklist_are_not_removed(
     ) -> anyhow::Result<()> {
-        let args = CommitArgs {
+        let args = Commit {
             message: Some(Faker.fake()),
             ticket: None,
             scope: None,
@@ -171,7 +168,7 @@ mod tests {
 
         let branch = Branch::new(&commands.branch_name, &commands.repo, None, None, None)?;
 
-        let args = CommitArgs {
+        let args = Commit {
             ticket: None,
             ..fake_args()
         };
@@ -188,8 +185,8 @@ mod tests {
         Ok(())
     }
 
-    fn fake_args() -> CommitArgs {
-        CommitArgs {
+    fn fake_args() -> Commit {
+        Commit {
             template: Faker.fake(),
             ticket: Faker.fake(),
             message: Faker.fake(),
@@ -197,55 +194,55 @@ mod tests {
         }
     }
 
-    fn get_arguments(args: Option<CommitArgs>) -> Vec<(&'static str, CommitArgs)> {
+    fn get_arguments(args: Option<Commit>) -> Vec<(&'static str, Commit)> {
         let args = args.unwrap_or_else(fake_args);
 
         vec![
             (
                 "🐛",
-                CommitArgs {
+                Commit {
                     template: "bug".into(),
                     ..args.clone()
                 },
             ),
             (
                 "✨",
-                CommitArgs {
+                Commit {
                     template: "feature".into(),
                     ..args.clone()
                 },
             ),
             (
                 "🧹",
-                CommitArgs {
+                Commit {
                     template: "refactor".into(),
                     ..args.clone()
                 },
             ),
             (
                 "⚠️",
-                CommitArgs {
+                Commit {
                     template: "break".into(),
                     ..args.clone()
                 },
             ),
             (
                 "📦",
-                CommitArgs {
+                Commit {
                     template: "deps".into(),
                     ..args.clone()
                 },
             ),
             (
                 "📖",
-                CommitArgs {
+                Commit {
                     template: "docs".into(),
                     ..args.clone()
                 },
             ),
             (
                 "🧪",
-                CommitArgs {
+                Commit {
                     template: "test".into(),
                     ..args.clone()
                 },
@@ -328,4 +325,5 @@ mod tests {
             },
         }
     }
+
 }

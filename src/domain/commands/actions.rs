@@ -1,14 +1,12 @@
 use crate::{
     app_context::AppContext,
-    cli::{checkout, context},
     domain::{
-        adapters::{CheckoutStatus, CommitMsgStatus, Git, Store},
+        adapters::{Git, Store},
         models::Branch,
-    },
-    utils::string::OptionStr,
+    }
 };
 
-use super::{Actor, CommitArgs};
+use super::Actor;
 
 pub struct Actions<'a, C: Git, S: Store> {
     context: &'a AppContext<C, S>,
@@ -21,69 +19,16 @@ impl<'a, C: Git, S: Store> Actions<'a, C, S> {
 }
 
 impl<'a, C: Git, S: Store> Actor for Actions<'a, C, S> {
-    fn current(&self, args: context::Arguments) -> anyhow::Result<Branch> {
-        // We want to store the branch name against and ticket number
-        // So whenever we commit we get the ticket number from the branch
-        let repo_name = self.context.git.repository_name()?;
-        let branch_name = self.context.git.branch_name()?;
-
-        let branch = Branch::new(&branch_name, &repo_name, args.ticket, args.link, args.scope)?;
-        self.context.store.persist_branch(&branch)?;
-
-        Ok(branch)
+    fn context(&self, args: super::Context) -> anyhow::Result<Branch> {
+        super::context::handler(self.context, args)
     }
 
-    fn checkout(&self, args: checkout::Arguments) -> anyhow::Result<Branch> {
-        // Attempt to create branch
-        let create = self.context.git.checkout(&args.name, CheckoutStatus::New);
-
-        // If the branch already exists check it out
-        if let Err(err) = create {
-            log::error!("failed to create new branch: {}", err);
-
-            self.context
-                .git
-                .checkout(&args.name, CheckoutStatus::Existing)?;
-        }
-
-        // We want to store the branch name against and ticket number
-        // So whenever we commit we get the ticket number from the branch
-        let repo_name = self.context.git.repository_name()?;
-        let branch = Branch::new(&args.name, &repo_name, args.ticket, args.link, args.scope)?;
-        self.context.store.persist_branch(&branch)?;
-
-        Ok(branch)
+    fn checkout(&self, args: super::Checkout) -> anyhow::Result<Branch> {
+        super::checkout::handler(self.context, args) 
     }
 
-    fn commit(&self, args: CommitArgs) -> anyhow::Result<String> {
-        let config = self.context.config.get_template_config(&args.template)?;
-
-        let branch = self
-            .context
-            .store
-            .get_branch(
-                &self.context.git.branch_name()?,
-                &self.context.git.repository_name()?,
-            )
-            .ok();
-
-        let contents = args.commit_message(config.content.clone(), branch)?;
-
-        let template_file = self.context.git.template_file_path()?;
-        std::fs::write(&template_file, &contents)?;
-
-        // Pre-cautionary measure encase 'message' is provided but still matches template exactly.
-        // Otherwise git will just abort the commit if theres no difference / change from the template.
-        let commit_msg_complete = match args.message.none_if_empty() {
-            Some(_) => CommitMsgStatus::Completed,
-            None => CommitMsgStatus::InComplete,
-        };
-
-        self.context
-            .git
-            .commit_with_template(&template_file, commit_msg_complete)?;
-
-        Ok(contents)
+    fn commit(&self, args: super::Commit) -> anyhow::Result<String> {
+        super::commit::handler(self.context, args)
     }
 }
 
@@ -105,6 +50,10 @@ mod tests {
     use crate::app_config::TemplateConfig;
     use crate::app_context::AppContext;
     use crate::domain::adapters::CheckoutStatus;
+    use crate::domain::adapters::CommitMsgStatus;
+    use crate::domain::commands::Checkout;
+    use crate::domain::commands::Commit;
+    use crate::domain::commands::Context;
     use crate::migrations::{db_migrations, MigrationContext};
 
     use super::*;
@@ -114,7 +63,7 @@ mod tests {
         // Arrange
         let repo = Faker.fake::<String>();
 
-        let command = checkout::Arguments {
+        let command = Checkout {
             ticket: Some(Faker.fake()),
             ..fake_checkout_args()
         };
@@ -241,7 +190,7 @@ mod tests {
         // Arrange
         let repo = Faker.fake::<String>();
 
-        let command = checkout::Arguments {
+        let command = Checkout {
             ticket: None,
             ..fake_checkout_args()
         };
@@ -287,7 +236,7 @@ mod tests {
         // Arrange
         let branch_name = Faker.fake::<String>();
         let repo = Faker.fake::<String>();
-        let command = context::Arguments {
+        let command = Context {
             ticket: Some(Faker.fake()),
             ..fake_context_args()
         };
@@ -302,7 +251,7 @@ mod tests {
         let actions = Actions::new(&context);
 
         // Act
-        actions.current(command.clone())?;
+        actions.context(command.clone())?;
 
         // Assert
         let branch = context.store.get_branch(&branch_name, &repo)?;
@@ -349,7 +298,7 @@ mod tests {
         let context = fake_context(git_mock, config)?;
         let actions = Actions::new(&context);
 
-        let args = CommitArgs {
+        let args = Commit {
             ticket: Some(Faker.fake()),
             message: Some(Faker.fake()),
             scope: Some(Faker.fake()),
@@ -399,7 +348,7 @@ mod tests {
         let context = fake_context(git_mock, config)?;
         let actions = Actions::new(&context);
 
-        let args = CommitArgs {
+        let args = Commit {
             ticket: None,
             message: None,
             scope: None,
@@ -430,7 +379,7 @@ mod tests {
             },
         };
 
-        let args = CommitArgs {
+        let args = Commit {
             template,
             message: Some(Faker.fake()),
             ticket: None,
@@ -588,8 +537,8 @@ mod tests {
         )?)
     }
 
-    fn fake_checkout_args() -> checkout::Arguments {
-        checkout::Arguments {
+    fn fake_checkout_args() -> Checkout {
+        Checkout {
             name: Faker.fake(),
             ticket: Some(Faker.fake()),
             link: Some(Faker.fake()),
@@ -597,8 +546,8 @@ mod tests {
         }
     }
 
-    fn fake_commit_args() -> CommitArgs {
-        CommitArgs {
+    fn fake_commit_args() -> Commit {
+        Commit {
             template: Faker.fake(),
             ticket: Faker.fake(),
             message: Faker.fake(),
@@ -606,8 +555,8 @@ mod tests {
         }
     }
 
-    fn fake_context_args() -> context::Arguments {
-        context::Arguments {
+    fn fake_context_args() -> Context {
+        Context {
             ticket: Faker.fake(),
             scope: Faker.fake(),
             link: Faker.fake(),

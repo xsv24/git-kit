@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     app_config::{AppConfig, TemplateConfig},
     cli::select::{SelectItem, SelectorPrompt},
-    domain::commands::{Actor, CommitArgs},
+    domain::commands::{Actor, Commit},
 };
 
 use super::Arguments;
@@ -20,7 +20,7 @@ pub fn handler(
     };
 
     // TODO: Could we do a prompt if no ticket / args found ?
-    actions.commit(CommitArgs {
+    actions.commit(Commit {
         template,
         ticket: args.ticket,
         message: args.message,

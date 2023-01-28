@@ -1,8 +1,13 @@
-use crate::domain::commands::Actor;
+use crate::domain::commands::{Actor, Context};
 
 use super::Arguments;
 
 pub fn handler(actions: &dyn Actor, args: Arguments) -> anyhow::Result<()> {
-    actions.current(args)?;
+    actions.context(Context {
+        ticket: args.ticket,
+        scope: args.scope,
+        link: args.link
+    })?;
+
     Ok(())
 }
