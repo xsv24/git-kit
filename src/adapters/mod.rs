@@ -1,5 +1,5 @@
 mod git;
-pub mod sqlite;
 pub mod prompt;
+pub mod sqlite;
 
 pub use git::Git;

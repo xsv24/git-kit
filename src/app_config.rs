@@ -55,27 +55,12 @@ impl AppConfig {
         Ok(connection)
     }
 
-    pub fn validate_template(&self, name: String) -> clap::error::Result<String> {
-        log::info!("validating template {}", name);
-
-        if self.commit.templates.contains_key(&name) {
-            log::info!("template {} 👌", &name);
-            Ok(name)
-        } else {
-            // TODO: want a nice error message that shows the templates output
-            Err(clap::Error::raw(
-                clap::error::ErrorKind::InvalidSubcommand,
-                format!("Found invalid subcommand '{}' given", name),
-            ))?
-        }
-    }
-
     pub fn get_template_config(&self, name: &str) -> clap::error::Result<&TemplateConfig> {
         log::info!("fetching template {}", name);
         let template = self.commit.templates.get(name).ok_or_else(|| {
             clap::Error::raw(
                 clap::error::ErrorKind::MissingSubcommand,
-                format!("Found missing subcommand '{}'", name),
+                format!("Found invalid subcommand '{}' given", name),
             )
         })?;
 

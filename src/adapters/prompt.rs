@@ -7,7 +7,7 @@ use inquire::{
     Select,
 };
 
-use crate::domain::adapters::prompt::{SelectItem, Prompter};
+use crate::domain::adapters::prompt::{Prompter, SelectItem};
 
 impl Display for SelectItem {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

@@ -1,4 +1,4 @@
-use crate::{domain::commands::{Actor, Checkout}, adapters::prompt::Prompt};
+use crate::{domain::commands::Actor, adapters::prompt::Prompt};
 
 use super::Arguments;
 

@@ -1,11 +1,9 @@
-use crate::AppConfig;
 use crate::domain::adapters::prompt::{Prompter, SelectItem};
-use crate::{
-    domain::{
-        adapters::{Git, Store},
-        models::{Config, ConfigKey, ConfigStatus},
-    },
+use crate::domain::{
+    adapters::{Git, Store},
+    models::{Config, ConfigKey, ConfigStatus},
 };
+use crate::AppConfig;
 
 use super::Arguments;
 use colored::Colorize;
@@ -93,7 +91,7 @@ fn local_config_warning<G: Git>(git: &G) -> anyhow::Result<()> {
 
 fn prompt_configuration_select<S: Store, P: Prompter>(
     store: &mut S,
-    selector: P 
+    selector: P,
 ) -> anyhow::Result<String> {
     let configurations: Vec<SelectItem> = store
         .get_configurations()?
