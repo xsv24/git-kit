@@ -8,12 +8,12 @@ mod utils;
 
 use std::fmt::Debug;
 
-use cli::{checkout, commit, context, log::LogLevel, select::SelectorFactory, templates};
+use cli::{checkout, commands::Commands, commit, context, log::LogLevel, templates};
 
-use adapters::{sqlite::Sqlite, Git};
+use adapters::{prompt::Prompt, sqlite::Sqlite, Git};
 use anyhow::{Context, Ok};
 use app_context::AppContext;
-use clap::{Parser, Subcommand};
+use clap::Parser;
 use domain::{
     adapters::{Git as _, Store},
     commands::Actions,
@@ -39,21 +39,6 @@ pub struct Cli {
     /// Commands
     #[clap(subcommand)]
     commands: Commands,
-}
-
-#[derive(Debug, Clone, Subcommand)]
-pub enum Commands {
-    /// Commit staged changes via git with a template message.
-    Commit(commit::Arguments),
-    /// Checkout an existing branch or create a new branch and add a ticket number as context for future commits.
-    Checkout(checkout::Arguments),
-    /// Add or update the ticket number related to the current branch.
-    Context(context::Arguments),
-    /// Get or Set persisted configuration file path.
-    #[clap(subcommand)]
-    Config(cli::config::Arguments),
-    /// Display a list of configured templates.
-    Templates,
 }
 
 impl Cli {
@@ -84,14 +69,14 @@ fn main() -> anyhow::Result<()> {
 
     let mut context = cli.init()?;
     let actions = Actions::new(&context);
-    let selector = SelectorFactory::create();
+    let prompt = Prompt;
 
     let result = match cli.commands {
         Commands::Checkout(args) => checkout::handler(&actions, args),
         Commands::Context(args) => context::handler(&actions, args),
-        Commands::Commit(args) => commit::handler(&actions, &context.config, args, selector),
+        Commands::Commit(args) => commit::handler(&actions, &context.config, args, Prompt),
         Commands::Config(args) => {
-            cli::config::handler(&mut context.store, &context.git, args, selector)
+            cli::config::handler(&mut context.store, &context.git, args, Prompt)
         }
         Commands::Templates => templates::handler(&context.config),
     };
