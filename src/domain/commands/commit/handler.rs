@@ -1,21 +1,22 @@
-use crate::{app_context::AppContext, domain::adapters::{Store, Git, CommitMsgStatus}, utils::string::OptionStr};
+use crate::{
+    domain::adapters::{CommitMsgStatus, Git, Store},
+    utils::string::OptionStr,
+};
 
 use super::Commit;
 
-pub fn handler<G: Git, S: Store>(context: &AppContext<G, S>, commit: Commit) -> anyhow::Result<String> {
-    let config = context.config.get_template_config(&commit.template)?;
-
-    let branch = context
-        .store
-        .get_branch(
-            &context.git.branch_name()?,
-            &context.git.repository_name()?,
-        )
+pub fn handler<G: Git, S: Store>(
+    git: &G,
+    store: &S,
+    commit: Commit,
+) -> anyhow::Result<String> {
+    let branch = store
+        .get_branch(&git.branch_name()?, &git.repository_name()?)
         .ok();
 
-    let contents = commit.commit_message(config.content.clone(), branch)?;
+    let contents = commit.commit_message(commit.template.content.clone(), branch)?;
 
-    let template_file = context.git.template_file_path()?;
+    let template_file = git.template_file_path()?;
     std::fs::write(&template_file, &contents)?;
 
     // Pre-cautionary measure encase 'message' is provided but still matches template exactly.
@@ -25,9 +26,7 @@ pub fn handler<G: Git, S: Store>(context: &AppContext<G, S>, commit: Commit) -> 
         None => CommitMsgStatus::InComplete,
     };
 
-    context
-        .git
-        .commit_with_template(&template_file, commit_msg_complete)?;
+    git.commit_with_template(&template_file, commit_msg_complete)?;
 
     Ok(contents)
 }

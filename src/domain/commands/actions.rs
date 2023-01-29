@@ -3,7 +3,7 @@ use crate::{
     domain::{
         adapters::{Git, Store},
         models::Branch,
-    }
+    },
 };
 
 use super::Actor;
@@ -20,15 +20,15 @@ impl<'a, C: Git, S: Store> Actions<'a, C, S> {
 
 impl<'a, C: Git, S: Store> Actor for Actions<'a, C, S> {
     fn context(&self, args: super::Context) -> anyhow::Result<Branch> {
-        super::context::handler(self.context, args)
+        super::context::handler(&self.context.git, &self.context.store, args)
     }
 
     fn checkout(&self, args: super::Checkout) -> anyhow::Result<Branch> {
-        super::checkout::handler(self.context, args) 
+        super::checkout::handler(&self.context.git, &self.context.store, args)
     }
 
     fn commit(&self, args: super::Commit) -> anyhow::Result<String> {
-        super::commit::handler(self.context, args)
+        super::commit::handler(&self.context.git, &self.context.store, args)
     }
 }
 
@@ -283,7 +283,7 @@ mod tests {
 
         let config = AppConfig {
             commit: CommitConfig {
-                templates: HashMap::from([(template.clone(), template_config)]),
+                templates: HashMap::from([(template.clone(), template_config.clone())]),
             },
         };
 
@@ -302,7 +302,7 @@ mod tests {
             ticket: Some(Faker.fake()),
             message: Some(Faker.fake()),
             scope: Some(Faker.fake()),
-            template,
+            template: template_config,
             ..fake_commit_args()
         };
 
@@ -333,7 +333,7 @@ mod tests {
 
         let config = AppConfig {
             commit: CommitConfig {
-                templates: HashMap::from([(template.clone(), template_config)]),
+                templates: HashMap::from([(template.clone(), template_config.clone())]),
             },
         };
 
@@ -352,7 +352,7 @@ mod tests {
             ticket: None,
             message: None,
             scope: None,
-            template,
+            template: template_config,
         };
 
         // Act
@@ -375,12 +375,12 @@ mod tests {
 
         let config = AppConfig {
             commit: CommitConfig {
-                templates: HashMap::from([(template.clone(), template_config)]),
+                templates: HashMap::from([(template.clone(), template_config.clone())]),
             },
         };
 
         let args = Commit {
-            template,
+            template: template_config,
             message: Some(Faker.fake()),
             ticket: None,
             scope: None,
@@ -547,8 +547,10 @@ mod tests {
     }
 
     fn fake_commit_args() -> Commit {
+        let (_, template) = fake_template();
+
         Commit {
-            template: Faker.fake(),
+            template,
             ticket: Faker.fake(),
             message: Faker.fake(),
             scope: Faker.fake(),
