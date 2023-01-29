@@ -1,8 +1,11 @@
-use crate::{domain::{template::Templator, models::Branch}, utils::{string::OptionStr, merge}};
+use crate::{
+    domain::{models::Branch, template::Templator},
+    utils::{merge, string::OptionStr}, app_config::TemplateConfig,
+};
 
 #[derive(Debug, Clone)]
 pub struct Commit {
-    pub template: String,
+    pub template: TemplateConfig,
     pub ticket: Option<String>,
     pub message: Option<String>,
     pub scope: Option<String>,
@@ -34,7 +37,7 @@ impl Commit {
 
 #[cfg(test)]
 mod tests {
-    use fake::{Faker, Fake};
+    use fake::{Fake, Faker};
 
     use super::*;
     use crate::{
@@ -111,14 +114,19 @@ mod tests {
 
     #[test]
     fn commit_message_with_both_args_are_populated() -> anyhow::Result<()> {
+        let template = TemplateConfig {
+            description: Faker.fake(),
+            content: "[{ticket_num}] {message}".into(),
+        };
+
         let args = Commit {
-            template: Faker.fake(),
+            template: template.clone(),
             ticket: Some(Faker.fake()),
             message: Some(Faker.fake()),
             ..fake_args()
         };
 
-        let actual = args.commit_message("[{ticket_num}] {message}".into(), None)?;
+        let actual = args.commit_message(template.content.into(), None)?;
         let expected = format!("[{}] {}", args.ticket.unwrap(), args.message.unwrap());
 
         assert_eq!(actual, expected);
@@ -187,143 +195,28 @@ mod tests {
 
     fn fake_args() -> Commit {
         Commit {
-            template: Faker.fake(),
+            template: TemplateConfig { description: Faker.fake(), content: Faker.fake() },
             ticket: Faker.fake(),
             message: Faker.fake(),
             scope: Faker.fake(),
         }
     }
 
-    fn get_arguments(args: Option<Commit>) -> Vec<(&'static str, Commit)> {
-        let args = args.unwrap_or_else(fake_args);
-
-        vec![
-            (
-                "🐛",
-                Commit {
-                    template: "bug".into(),
-                    ..args.clone()
-                },
-            ),
-            (
-                "✨",
-                Commit {
-                    template: "feature".into(),
-                    ..args.clone()
-                },
-            ),
-            (
-                "🧹",
-                Commit {
-                    template: "refactor".into(),
-                    ..args.clone()
-                },
-            ),
-            (
-                "⚠️",
-                Commit {
-                    template: "break".into(),
-                    ..args.clone()
-                },
-            ),
-            (
-                "📦",
-                Commit {
-                    template: "deps".into(),
-                    ..args.clone()
-                },
-            ),
-            (
-                "📖",
-                Commit {
-                    template: "docs".into(),
-                    ..args.clone()
-                },
-            ),
-            (
-                "🧪",
-                Commit {
-                    template: "test".into(),
-                    ..args.clone()
-                },
-            ),
-        ]
-    }
-
     #[test]
     fn get_template_config_by_name_key() -> anyhow::Result<()> {
-        let config = fake_config();
+        let key: String = Faker.fake();
 
-        for (content, arguments) in get_arguments(None) {
-            let template_config = config.get_template_config(&arguments.template)?;
-            assert!(template_config.content.contains(content))
-        }
+        let config = AppConfig {
+            commit: CommitConfig { 
+                templates: HashMap::from([
+                (key.clone(), TemplateConfig { description: key.clone(), content: key.clone() })
+            ])
+            }
+        };
+        
+        let template_config = config.get_template_config(&key)?;
+        assert_eq!(key, template_config.description);
 
         Ok(())
     }
-
-    fn fake_template_config() -> HashMap<String, TemplateConfig> {
-        let mut map = HashMap::new();
-
-        map.insert(
-            "bug".into(),
-            TemplateConfig {
-                description: Faker.fake(),
-                content: "{ticket_num} 🐛 {message}".into(),
-            },
-        );
-        map.insert(
-            "feature".into(),
-            TemplateConfig {
-                description: Faker.fake(),
-                content: "{ticket_num} ✨ {message}".into(),
-            },
-        );
-        map.insert(
-            "refactor".into(),
-            TemplateConfig {
-                description: Faker.fake(),
-                content: "{ticket_num} 🧹 {message}".into(),
-            },
-        );
-        map.insert(
-            "break".into(),
-            TemplateConfig {
-                description: Faker.fake(),
-                content: "{ticket_num} ⚠️ {message}".into(),
-            },
-        );
-        map.insert(
-            "deps".into(),
-            TemplateConfig {
-                description: Faker.fake(),
-                content: "{ticket_num} 📦 {message}".into(),
-            },
-        );
-        map.insert(
-            "docs".into(),
-            TemplateConfig {
-                description: Faker.fake(),
-                content: "{ticket_num} 📖 {message}".into(),
-            },
-        );
-        map.insert(
-            "test".into(),
-            TemplateConfig {
-                description: Faker.fake(),
-                content: "{ticket_num} 🧪 {message}".into(),
-            },
-        );
-
-        map
-    }
-
-    fn fake_config() -> AppConfig {
-        AppConfig {
-            commit: CommitConfig {
-                templates: fake_template_config(),
-            },
-        }
-    }
-
 }
