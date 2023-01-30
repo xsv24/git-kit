@@ -64,7 +64,7 @@ pub fn db_migrations(
         migrate_default_configuration(config_paths, connection, version)?;
     }
 
-    println!("git-kit migration version '{version}'.", );
+    println!("git-kit migration version '{version}'.");
 
     Ok(migrations)
 }
