@@ -1,70 +1,72 @@
+use clap::Args;
+
 use crate::domain::{
     adapters::{
         prompt::{Prompter, SelectItem},
         Store,
     },
-    commands::config::{AddConfig, Config, SetConfig},
+    models::{Config, ConfigKey, ConfigStatus},
 };
 
 #[derive(Debug, Clone, clap::Subcommand)]
 pub enum Arguments {
     /// Add / register a custom config file.
-    Add {
-        /// Name used to reference the config file.
-        name: String,
-        /// File path to the config file.
-        path: String,
-    },
+    Add(ConfigAdd),
     /// Switch to another config file.
-    Set {
-        /// Name used to reference the config file.
-        name: Option<String>,
-    },
+    Set(ConfigSet),
     /// Display the current config in use.
     Show,
     /// Reset to the default config.
     Reset,
 }
 
-impl Arguments {
-    pub fn try_into_domain<S: Store, P: Prompter>(
-        &self,
-        store: &S,
-        prompt: P,
-    ) -> anyhow::Result<Config> {
-        let config = match self {
-            Arguments::Add { name, path } => Config::Add(AddConfig {
-                name: name.into(),
-                path: path.into(),
-            }),
-            Arguments::Set { name } => Config::Set(SetConfig {
-                name: match name {
-                    Some(name) => name.into(),
-                    None => prompt_configuration_select(store, prompt)?,
-                },
-            }),
-            Arguments::Show => Config::List,
-            Arguments::Reset => Config::Reset,
-        };
+#[derive(Debug, Args, PartialEq, Eq, Clone)]
+pub struct ConfigAdd {
+    /// Name used to reference the config file.
+    pub name: String,
+    /// File path to the config file.
+    pub path: String,
+}
 
-        Ok(config)
+impl ConfigAdd {
+    pub fn try_into_domain(self) -> anyhow::Result<Config> {
+        Config::new(self.name.into(), self.path, ConfigStatus::Active)
     }
 }
 
-fn prompt_configuration_select<S: Store, P: Prompter>(
-    store: &S,
+#[derive(Debug, Args, PartialEq, Eq, Clone)]
+pub struct ConfigSet {
+    /// Name used to reference the config file.
+    name: Option<String>,
+}
+
+impl ConfigSet {
+    pub fn try_into_domain<S: Store, P: Prompter>(
+        self,
+        store: &S,
+        prompt: P,
+    ) -> anyhow::Result<ConfigKey> {
+        Ok(match self.name {
+            Some(name) => name.into(),
+            None => prompt_configuration_select(store.get_configurations()?, prompt)?,
+        })
+    }
+}
+
+fn prompt_configuration_select<P: Prompter>(
+    configurations: Vec<Config>,
     selector: P,
-) -> anyhow::Result<String> {
-    let configurations: Vec<SelectItem> = store
-        .get_configurations()?
+) -> anyhow::Result<ConfigKey> {
+    let configurations: Vec<SelectItem<ConfigKey>> = configurations
         .iter()
         .map(|config| SelectItem {
             name: config.key.clone().into(),
+            value: config.key.clone(),
             description: None,
         })
         .collect();
 
     let selected = selector.select("Configuration:", configurations)?;
 
-    Ok(selected.name)
+    Ok(selected.value)
 }
