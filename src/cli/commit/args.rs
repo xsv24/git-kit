@@ -3,11 +3,11 @@ use std::{collections::HashMap, fmt::Debug};
 use clap::Args;
 
 use crate::{
-    app_config::{AppConfig, TemplateConfig},
     domain::{
         adapters::prompt::{Prompter, SelectItem},
         commands::Commit,
     },
+    template_config::{Template, TemplateConfig},
 };
 
 #[derive(Debug, Args, PartialEq, Eq, Clone)]
@@ -31,7 +31,7 @@ pub struct Arguments {
 impl Arguments {
     pub fn try_into_domain<P: Prompter>(
         &self,
-        config: &AppConfig,
+        config: &TemplateConfig,
         prompter: P,
     ) -> anyhow::Result<Commit> {
         let template = match &self.template {
@@ -49,14 +49,14 @@ impl Arguments {
     }
 
     fn prompt_template_select<P: Prompter>(
-        templates: HashMap<String, TemplateConfig>,
+        templates: HashMap<String, Template>,
         prompter: P,
     ) -> anyhow::Result<String> {
         let items = templates
-            .clone()
             .into_iter()
             .map(|(name, template)| SelectItem {
-                name,
+                name: name.clone(),
+                value: name,
                 description: Some(template.description),
             })
             .collect::<Vec<_>>();

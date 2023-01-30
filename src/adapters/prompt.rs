@@ -9,7 +9,7 @@ use inquire::{
 
 use crate::domain::adapters::prompt::{Prompter, SelectItem};
 
-impl Display for SelectItem {
+impl<T> Display for SelectItem<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -35,15 +35,19 @@ impl Prompt {
 }
 
 impl Prompter for Prompt {
-    fn select(&self, question: &str, options: Vec<SelectItem>) -> anyhow::Result<SelectItem> {
+    fn select<T>(
+        &self,
+        question: &str,
+        options: Vec<SelectItem<T>>,
+    ) -> anyhow::Result<SelectItem<T>> {
         let len = options.len();
-        let select: Select<SelectItem> = Select {
+        let select: Select<SelectItem<T>> = Select {
             message: question,
             options,
-            help_message: Select::<SelectItem>::DEFAULT_HELP_MESSAGE,
+            help_message: Select::<SelectItem<T>>::DEFAULT_HELP_MESSAGE,
             page_size: len,
-            vim_mode: Select::<SelectItem>::DEFAULT_VIM_MODE,
-            starting_cursor: Select::<SelectItem>::DEFAULT_STARTING_CURSOR,
+            vim_mode: Select::<SelectItem<T>>::DEFAULT_VIM_MODE,
+            starting_cursor: Select::<SelectItem<T>>::DEFAULT_STARTING_CURSOR,
             filter: Select::DEFAULT_FILTER,
             formatter: Select::DEFAULT_FORMATTER,
             render_config: Self::get_render_config(),
