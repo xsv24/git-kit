@@ -26,9 +26,9 @@ impl Commands {
         prompt: P 
     ) -> anyhow::Result<()> {
         match self {
-            Commands::Checkout(args) => checkout::handler(&context, args),
-            Commands::Context(args) => context::handler(&context, args),
-            Commands::Commit(args) => commit::handler(&context, args, prompt),
+            Commands::Checkout(args) => checkout::handler(context, args),
+            Commands::Context(args) => context::handler(context, args),
+            Commands::Commit(args) => commit::handler(context, args, prompt),
             Commands::Config(args) => 
                 config::handler(&mut context.store, &context.config.key, args, prompt),
             Commands::Templates => templates::handler(&context.config),

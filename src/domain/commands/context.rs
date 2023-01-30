@@ -16,7 +16,7 @@ pub struct Context {
 pub fn handler<G: Git, S: Store>(
     git: &G,
     store: &S,
-    args: super::Context,
+    args: Context,
 ) -> anyhow::Result<Branch> {
     // We want to store the branch name against and ticket number
     // So whenever we commit we get the ticket number from the branch

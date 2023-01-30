@@ -1,6 +1,6 @@
 use clap::Args;
 
-use crate::domain::{adapters::prompt::Prompter, commands::Context};
+use crate::domain::{adapters::prompt::Prompter, commands::context::Context};
 
 #[derive(Debug, Clone, Args)]
 pub struct Arguments {
