@@ -5,11 +5,7 @@ use crate::{
 
 use super::Commit;
 
-pub fn handler<G: Git, S: Store>(
-    git: &G,
-    store: &S,
-    commit: Commit,
-) -> anyhow::Result<String> {
+pub fn handler<G: Git, S: Store>(git: &G, store: &S, commit: Commit) -> anyhow::Result<String> {
     let branch = store
         .get_branch(&git.branch_name()?, &git.repository_name()?)
         .ok();

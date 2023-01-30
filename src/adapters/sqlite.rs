@@ -92,9 +92,10 @@ impl domain::adapters::Store for Sqlite {
         Ok(())
     }
 
-    fn set_active_config(&mut self, key: ConfigKey) -> anyhow::Result<Config> {
+    fn set_active_config(&mut self, key: &ConfigKey) -> anyhow::Result<Config> {
         let transaction = self.transaction()?;
-        let key: String = key.into();
+
+        let key: String = key.to_owned().into();
 
         let (active, disabled) = (
             String::from(ConfigStatus::Active),
@@ -238,7 +239,6 @@ mod tests {
 
     use crate::{
         adapters::Git,
-        app_config::{AppConfig, CommitConfig},
         app_context::AppContext,
         domain::adapters::Store,
     };
@@ -336,7 +336,7 @@ mod tests {
         let context = AppContext {
             store,
             git: Git,
-            config: fake_app_config(),
+            config: fake_config(),
         };
 
         let keys = branches.keys().cloned().collect::<Vec<String>>();
@@ -366,7 +366,7 @@ mod tests {
         let context = AppContext {
             store: Sqlite::new(setup_db()?)?,
             git: Git,
-            config: fake_app_config(),
+            config: fake_config(),
         };
 
         // Insert random collection of branches.
@@ -511,7 +511,7 @@ mod tests {
         insert_config(&connection, &original)?;
 
         let mut store = Sqlite::new(connection)?;
-        let actual = store.set_active_config(original.key.clone())?;
+        let actual = store.set_active_config(&original.key.clone())?;
 
         original.status = ConfigStatus::Active;
         assert_eq!(original, actual);
@@ -531,7 +531,7 @@ mod tests {
 
         insert_config(&store.connection, &active_config)?;
 
-        let result = store.set_active_config(ConfigKey::User(Faker.fake()));
+        let result = store.set_active_config(&ConfigKey::User(Faker.fake()));
         assert!(result.is_err());
 
         let default = store.get_configuration(Some(active_config.key.clone().into()))?;
@@ -562,7 +562,7 @@ mod tests {
 
         let mut store = Sqlite::new(connection)?;
         // Act
-        store.set_active_config(original.key.clone())?;
+        store.set_active_config(&original.key)?;
 
         let configs = select_all_config(&store.connection)?;
 
@@ -580,14 +580,6 @@ mod tests {
         assert_eq!(&expected, only_active);
 
         Ok(())
-    }
-
-    fn fake_app_config() -> AppConfig {
-        AppConfig {
-            commit: CommitConfig {
-                templates: HashMap::new(),
-            },
-        }
     }
 
     fn fake_config() -> Config {

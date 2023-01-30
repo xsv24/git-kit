@@ -1,11 +1,12 @@
 use crate::{
     domain::{models::Branch, template::Templator},
-    utils::{merge, string::OptionStr}, app_config::TemplateConfig,
+    template_config::Template,
+    utils::{merge, string::OptionStr},
 };
 
 #[derive(Debug, Clone)]
 pub struct Commit {
-    pub template: TemplateConfig,
+    pub template: Template,
     pub ticket: Option<String>,
     pub message: Option<String>,
     pub scope: Option<String>,
@@ -41,8 +42,8 @@ mod tests {
 
     use super::*;
     use crate::{
-        app_config::{AppConfig, CommitConfig, TemplateConfig},
         domain::models::Branch,
+        template_config::{CommitConfig, Template, TemplateConfig},
     };
     use std::collections::HashMap;
 
@@ -114,7 +115,7 @@ mod tests {
 
     #[test]
     fn commit_message_with_both_args_are_populated() -> anyhow::Result<()> {
-        let template = TemplateConfig {
+        let template = Template {
             description: Faker.fake(),
             content: "[{ticket_num}] {message}".into(),
         };
@@ -195,7 +196,10 @@ mod tests {
 
     fn fake_args() -> Commit {
         Commit {
-            template: TemplateConfig { description: Faker.fake(), content: Faker.fake() },
+            template: Template {
+                description: Faker.fake(),
+                content: Faker.fake(),
+            },
             ticket: Faker.fake(),
             message: Faker.fake(),
             scope: Faker.fake(),
@@ -206,14 +210,18 @@ mod tests {
     fn get_template_config_by_name_key() -> anyhow::Result<()> {
         let key: String = Faker.fake();
 
-        let config = AppConfig {
-            commit: CommitConfig { 
-                templates: HashMap::from([
-                (key.clone(), TemplateConfig { description: key.clone(), content: key.clone() })
-            ])
-            }
+        let config = TemplateConfig {
+            commit: CommitConfig {
+                templates: HashMap::from([(
+                    key.clone(),
+                    Template {
+                        description: key.clone(),
+                        content: key.clone(),
+                    },
+                )]),
+            },
         };
-        
+
         let template_config = config.get_template_config(&key)?;
         assert_eq!(key, template_config.description);
 

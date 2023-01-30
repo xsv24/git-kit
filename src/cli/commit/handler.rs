@@ -1,18 +1,22 @@
 use crate::{
-    app_config::AppConfig,
-    domain::{adapters::prompt::Prompter, commands::Actor},
+    app_context::AppContext,
+    domain::{
+        adapters::{prompt::Prompter, Git, Store},
+        commands::commit,
+    },
+    template_config::TemplateConfig,
 };
 
 use super::Arguments;
 
-pub fn handler<P: Prompter>(
-    actions: &dyn Actor,
-    config: &AppConfig,
+pub fn handler<G: Git, S: Store, P: Prompter>(
+    context: &AppContext<G, S>,
     args: Arguments,
     prompter: P,
 ) -> anyhow::Result<()> {
-    let commit = args.try_into_domain(config, prompter)?;
-    actions.commit(commit)?;
+    let templates = TemplateConfig::new(&context.config.path)?;
+    let commit = args.try_into_domain(&templates, prompter)?;
+    commit::handler(&context.git, &context.store, commit)?;
 
     Ok(())
 }

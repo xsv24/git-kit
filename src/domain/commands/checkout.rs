@@ -1,8 +1,6 @@
-use crate::{
-    domain::{
-        adapters::{CheckoutStatus, Git, Store},
-        models::Branch,
-    },
+use crate::domain::{
+    adapters::{CheckoutStatus, Git, Store},
+    models::Branch,
 };
 
 #[derive(Debug, Clone)]
@@ -17,11 +15,7 @@ pub struct Checkout {
     pub link: Option<String>,
 }
 
-pub fn handler<G: Git, S: Store>(
-    git: &G,
-    store: &S,
-    args: Checkout,
-) -> anyhow::Result<Branch> {
+pub fn handler<G: Git, S: Store>(git: &G, store: &S, args: Checkout) -> anyhow::Result<Branch> {
     // Attempt to create branch
     let create = git.checkout(&args.name, CheckoutStatus::New);
 

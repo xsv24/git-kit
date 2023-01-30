@@ -1,8 +1,6 @@
-use crate::{
-    domain::{
-        adapters::{Git, Store},
-        models::Branch,
-    },
+use crate::domain::{
+    adapters::{Git, Store},
+    models::Branch,
 };
 
 #[derive(Debug, Clone)]
