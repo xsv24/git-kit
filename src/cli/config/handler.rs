@@ -39,7 +39,7 @@ pub fn handler<S: Store, P: Prompter>(
 
                 match config.status {
                     ConfigStatus::Active => println!("🟢 {} (Active) ➜ '{}'", key.green(), path),
-                    ConfigStatus::Disabled => println!("🔴 {} ➜ '{}'", key, path),
+                    ConfigStatus::Disabled => println!("🔴 {key} ➜ '{path}'"),
                 }
             }
         }

@@ -12,8 +12,7 @@ fn brackets_regex(target: &str) -> anyhow::Result<Regex> {
     // ({target}) | [{target}] | {{target}} | {target}
     // example: http://regexr.com/75aee
     let regex = Regex::new(&format!(
-        r"(\(\{{{}\}}\)\s?)|(\[\{{{}\}}\]\s?)|(\{{\{{{}\}}\}}\s?)|(\{{{}\}}\s?)",
-        target, target, target, target
+        r"(\(\{{{target}\}}\)\s?)|(\[\{{{target}\}}\]\s?)|(\{{\{{{target}\}}\}}\s?)|(\{{{target}\}}\s?)"
     ))?;
 
     Ok(regex)
@@ -21,7 +20,7 @@ fn brackets_regex(target: &str) -> anyhow::Result<Regex> {
 
 impl Templator for String {
     fn replace_or_remove(&self, target: &str, replace: Option<String>) -> anyhow::Result<String> {
-        let template = format!("{{{}}}", target);
+        let template = format!("{{{target}}}");
 
         let message = match &replace.none_if_empty() {
             Some(value) => {
@@ -31,7 +30,7 @@ impl Templator for String {
             None => {
                 log::info!("removing '{}' from template", target);
                 brackets_regex(target)
-                    .with_context(|| format!("Invalid template for parameter '{}'.", target))?
+                    .with_context(|| format!("Invalid template for parameter '{target}'."))?
                     .replace_all(self, "")
                     .into()
             }

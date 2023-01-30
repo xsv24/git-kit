@@ -113,7 +113,7 @@ impl domain::adapters::Store for Sqlite {
                 "UPDATE config SET status = ?1 WHERE status = ?2;",
                 (&disabled, &active),
             )
-            .with_context(|| format!("Failed to set any '{}' config to '{}'.", disabled, active))?;
+            .with_context(|| format!("Failed to set any '{disabled}' config to '{active}'."))?;
 
         // Update the desired config to 'ACTIVE'
         transaction
@@ -121,7 +121,7 @@ impl domain::adapters::Store for Sqlite {
                 "UPDATE config SET status = ?1 WHERE key = ?2;",
                 (&active, &key),
             )
-            .with_context(|| format!("Failed to update config status to '{}'.", active))?;
+            .with_context(|| format!("Failed to update config status to '{active}'."))?;
 
         transaction
             .commit()

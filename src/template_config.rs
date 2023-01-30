@@ -35,7 +35,7 @@ impl TemplateConfig {
         let template = self.commit.templates.get(name).ok_or_else(|| {
             clap::Error::raw(
                 clap::error::ErrorKind::MissingSubcommand,
-                format!("Found invalid subcommand '{}' given", name),
+                format!("Found invalid subcommand '{name}' given"),
             )
         })?;
 
