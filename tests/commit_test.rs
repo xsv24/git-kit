@@ -1,15 +1,15 @@
 mod fakers;
 
-use crate::fakers::{
-    fake_config, fake_context,
-    GitCommandMock,
-};
+use crate::fakers::{fake_config, fake_context, GitCommandMock};
 use fake::{Fake, Faker};
 use git_kit::{
+    adapters::sqlite::Sqlite,
     domain::{
         adapters::{CommitMsgStatus, Git, Store},
-        models::Branch, commands::commit::{Commit, handler},
-    }, adapters::sqlite::Sqlite, template_config::Template,
+        commands::commit::{handler, Commit},
+        models::Branch,
+    },
+    template_config::Template,
 };
 
 #[test]
@@ -37,7 +37,7 @@ fn commit_message_with_all_arguments_are_injected_into_the_template_with_nothing
     };
 
     // Act
-    let contents = handler(&context.git, &context.store, args.clone()) 
+    let contents = handler(&context.git, &context.store, args.clone())
         .expect("Error performing 'commit' action");
 
     // Assert
@@ -78,7 +78,7 @@ fn commit_message_with_no_args_or_stored_branch_defaults_correctly() -> anyhow::
     };
 
     // Act
-    let contents = handler(&context.git, &context.store, args.clone()) 
+    let contents = handler(&context.git, &context.store, args.clone())
         .expect("Error performing 'commit' action");
 
     // Assert
@@ -92,7 +92,7 @@ fn commit_message_with_no_args_or_stored_branch_defaults_correctly() -> anyhow::
 #[test]
 fn commit_message_with_no_commit_args_defaults_to_stored_branch_values() -> anyhow::Result<()> {
     // Arrange
-    let template_config= fake_template();
+    let template_config = fake_template();
 
     let args = Commit {
         template: template_config,
@@ -115,7 +115,7 @@ fn commit_message_with_no_commit_args_defaults_to_stored_branch_values() -> anyh
     setup_db(&context.store, Some(&branch))?;
 
     // Act
-    let commit_message = handler(&context.git, &context.store, args.clone()) 
+    let commit_message = handler(&context.git, &context.store, args.clone())
         .expect("Error performing 'commit' action");
 
     // Assert

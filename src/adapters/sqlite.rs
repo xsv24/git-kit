@@ -237,11 +237,7 @@ impl<'a> TryFrom<&Row<'a>> for Branch {
 mod tests {
     use std::{collections::HashMap, path::Path};
 
-    use crate::{
-        adapters::Git,
-        app_context::AppContext,
-        domain::adapters::Store,
-    };
+    use crate::{adapters::Git, app_context::AppContext, domain::adapters::Store};
 
     use crate::migrations::{db_migrations, MigrationContext};
 

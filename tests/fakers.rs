@@ -12,7 +12,7 @@ use git_kit::{
         adapters::{CheckoutStatus, CommitMsgStatus, Git},
         models::{Config, ConfigStatus},
     },
-    migrations::{db_migrations, MigrationContext}
+    migrations::{db_migrations, MigrationContext},
 };
 use rusqlite::Connection;
 use uuid::Uuid;

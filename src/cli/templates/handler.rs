@@ -6,11 +6,7 @@ pub fn handler(config: &Config) -> anyhow::Result<()> {
     log::info!("collect commit templates from config.");
     let templates = TemplateConfig::new(&config.path)?;
 
-    let mut pairs = templates
-        .commit
-        .templates
-        .into_iter()
-        .collect::<Vec<_>>();
+    let mut pairs = templates.commit.templates.into_iter().collect::<Vec<_>>();
 
     pairs.sort_by_key(|(k, ..)| k.to_owned());
 

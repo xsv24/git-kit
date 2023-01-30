@@ -13,11 +13,7 @@ pub struct Context {
     pub link: Option<String>,
 }
 
-pub fn handler<G: Git, S: Store>(
-    git: &G,
-    store: &S,
-    args: Context,
-) -> anyhow::Result<Branch> {
+pub fn handler<G: Git, S: Store>(git: &G, store: &S, args: Context) -> anyhow::Result<Branch> {
     // We want to store the branch name against and ticket number
     // So whenever we commit we get the ticket number from the branch
     let repo_name = git.repository_name()?;

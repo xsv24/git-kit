@@ -3,7 +3,8 @@ mod fakers;
 use fake::{Fake, Faker};
 use git_kit::domain::{
     adapters::Store,
-    models::Branch, commands::context::{Context, handler},
+    commands::context::{handler, Context},
+    models::Branch,
 };
 
 use crate::fakers::{fake_config, fake_context, GitCommandMock};

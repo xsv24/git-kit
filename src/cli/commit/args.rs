@@ -4,7 +4,8 @@ use clap::Args;
 
 use crate::{
     domain::{
-        adapters::prompt::{Prompter, SelectItem}, commands::commit::Commit,
+        adapters::prompt::{Prompter, SelectItem},
+        commands::commit::Commit,
     },
     template_config::{Template, TemplateConfig},
 };

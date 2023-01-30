@@ -1,5 +1,5 @@
 use clap::Parser;
-use git_kit::{entry::Cli, adapters::prompt::Prompt};
+use git_kit::{adapters::prompt::Prompt, entry::Cli};
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();

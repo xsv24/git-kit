@@ -1,6 +1,9 @@
 use clap::Subcommand;
 
-use crate::{domain::adapters::{Store, Git, prompt::Prompter}, app_context::AppContext};
+use crate::{
+    app_context::AppContext,
+    domain::adapters::{prompt::Prompter, Git, Store},
+};
 
 use super::{checkout, commit, config, context, templates};
 
@@ -23,14 +26,15 @@ impl Commands {
     pub fn execute<G: Git, S: Store, P: Prompter>(
         self,
         context: &mut AppContext<G, S>,
-        prompt: P 
+        prompt: P,
     ) -> anyhow::Result<()> {
         match self {
             Commands::Checkout(args) => checkout::handler(context, args),
             Commands::Context(args) => context::handler(context, args),
             Commands::Commit(args) => commit::handler(context, args, prompt),
-            Commands::Config(args) => 
-                config::handler(&mut context.store, &context.config.key, args, prompt),
+            Commands::Config(args) => {
+                config::handler(&mut context.store, &context.config.key, args, prompt)
+            }
             Commands::Templates => templates::handler(&context.config),
         }
     }
