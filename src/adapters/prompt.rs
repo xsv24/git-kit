@@ -8,7 +8,7 @@ use inquire::{
 
 use crate::{
     domain::adapters::prompt::{Prompter, SelectItem},
-    utils::string::OptionStr,
+    utils::string::OptionStr
 };
 
 impl<T> Display for SelectItem<T> {
@@ -59,7 +59,7 @@ impl Prompter for Prompt {
     }
 
     fn text(&self, question: &str) -> anyhow::Result<Option<String>> {
-        let result = Text::new(question).prompt()?;
+        let result = Text::new(question).prompt_skippable()?;
         Ok(result.none_if_empty())
     }
 }
