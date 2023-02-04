@@ -1,6 +1,10 @@
 use clap::Args;
 
-use crate::domain::{adapters::prompt::Prompter, commands::context::Context};
+use crate::{
+    domain::{adapters::prompt::Prompter, commands::context::Context},
+    entry::Interactive,
+    utils::or_else_try::OrElseTry,
+};
 
 #[derive(Debug, Clone, Args)]
 pub struct Arguments {
@@ -18,11 +22,24 @@ pub struct Arguments {
 }
 
 impl Arguments {
-    pub fn try_into_domain<P: Prompter>(&self, _prompt: P) -> anyhow::Result<Context> {
-        Ok(Context {
-            ticket: self.ticket.clone(),
-            scope: self.scope.clone(),
-            link: self.link.clone(),
-        })
+    pub fn try_into_domain<P: Prompter>(
+        &self,
+        prompt: P,
+        interactive: &Interactive,
+    ) -> anyhow::Result<Context> {
+        let domain = match interactive {
+            Interactive::Enable => Context {
+                ticket: self.ticket.clone().or_else_try(|| prompt.text("Ticket:"))?,
+                scope: self.scope.clone().or_else_try(|| prompt.text("Scope:"))?,
+                link: self.link.clone().or_else_try(|| prompt.text("Link:"))?,
+            },
+            Interactive::Disable => Context {
+                ticket: self.ticket.clone(),
+                scope: self.scope.clone(),
+                link: self.link.clone(),
+            },
+        };
+
+        Ok(domain)
     }
 }
