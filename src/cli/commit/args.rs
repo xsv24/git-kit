@@ -7,7 +7,7 @@ use crate::{
         adapters::prompt::{Prompter, SelectItem},
         commands::commit::Commit,
     },
-    template_config::{Template, TemplateConfig},
+    template_config::{Template, TemplateConfig}, entry::Interactive,
 };
 
 #[derive(Debug, Args, PartialEq, Eq, Clone)]
@@ -33,10 +33,11 @@ impl Arguments {
         &self,
         config: &TemplateConfig,
         prompter: P,
+        interactive: &Interactive
     ) -> anyhow::Result<Commit> {
         let template = match &self.template {
             Some(template) => template.into(),
-            None => Self::prompt_template_select(config.commit.templates.clone(), prompter)?,
+            None => Self::prompt_template_select(config.commit.templates.clone(), prompter, interactive.to_owned())?,
         };
 
         // TODO: Could we do a prompt if no ticket / args found ?
@@ -51,7 +52,15 @@ impl Arguments {
     fn prompt_template_select<P: Prompter>(
         templates: HashMap<String, Template>,
         prompter: P,
+        interactive: Interactive
     ) -> anyhow::Result<String> {
+        if interactive == Interactive::Disable {
+            anyhow::bail!(clap::Error::raw(
+                clap::ErrorKind::MissingRequiredArgument,
+                "'template' is required"
+            ))
+        }
+
         let items = templates
             .into_iter()
             .map(|(name, template)| SelectItem {
