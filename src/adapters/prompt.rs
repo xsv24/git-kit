@@ -8,7 +8,7 @@ use inquire::{
 
 use crate::{
     domain::adapters::prompt::{Prompter, SelectItem},
-    utils::string::OptionStr
+    utils::string::OptionStr,
 };
 
 impl<T> Display for SelectItem<T> {

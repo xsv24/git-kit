@@ -86,3 +86,74 @@ fn prompt_configuration_select<P: Prompter>(
 
     Ok(selected.value)
 }
+#[cfg(test)]
+mod tests {
+    use anyhow::Context;
+    use fake::{Fake, Faker};
+    use std::path::PathBuf;
+
+    use super::*;
+    use crate::domain::adapters::prompt::{Prompter, SelectItem};
+
+    #[test]
+    fn with_interactive_enabled_select_prompt_is_used() {
+        // Arrange
+        let config = fake_config();
+        let selector = PromptTest {
+            select_item_name: Ok(config.key.clone().into()),
+        };
+        let configurations = vec![fake_config(), config.clone(), fake_config()];
+
+        // Act
+        let selected =
+            prompt_configuration_select(configurations, selector, Interactive::Enable).unwrap();
+
+        // Assert
+        assert_eq!(config.key, selected);
+    }
+
+    #[test]
+    fn with_interactive_disabled_select_prompt_errors() {
+        // Arrange
+        let config = fake_config();
+        let selector = PromptTest {
+            select_item_name: Ok(config.key.clone().into()),
+        };
+        let configurations = vec![fake_config(), config.clone(), fake_config()];
+
+        // Act
+        let error = prompt_configuration_select(configurations, selector, Interactive::Disable)
+            .unwrap_err();
+
+        // Assert
+        assert_eq!(error.to_string(), "error: 'name' is required");
+    }
+
+    pub fn fake_config() -> Config {
+        Config {
+            key: ConfigKey::User(Faker.fake()),
+            path: PathBuf::new(),
+            status: ConfigStatus::Active,
+        }
+    }
+
+    pub struct PromptTest {
+        select_item_name: anyhow::Result<String>,
+    }
+
+    impl Prompter for PromptTest {
+        fn text(&self, _: &str) -> anyhow::Result<Option<String>> {
+            Err(anyhow::anyhow!("Text prompt should not be invoked"))
+        }
+
+        fn select<T>(&self, _: &str, options: Vec<SelectItem<T>>) -> anyhow::Result<SelectItem<T>> {
+            match &self.select_item_name {
+                Ok(name) => Ok(options
+                    .into_iter()
+                    .find(|i| i.name == name.clone())
+                    .context("Failed to get item")?),
+                Err(_) => Err(anyhow::anyhow!("Select prompt failed")),
+            }
+        }
+    }
+}
