@@ -4,7 +4,7 @@ use crate::{
         adapters::{prompt::Prompter, Git, Store},
         commands::commit,
     },
-    template_config::TemplateConfig
+    template_config::TemplateConfig,
 };
 
 use super::Arguments;
@@ -12,7 +12,7 @@ use super::Arguments;
 pub fn handler<G: Git, S: Store, P: Prompter>(
     context: &AppContext<G, S>,
     args: Arguments,
-    prompter: P
+    prompter: P,
 ) -> anyhow::Result<()> {
     let templates = TemplateConfig::new(&context.config.path)?;
     let commit = args.try_into_domain(&templates, prompter, &context.interactive)?;
