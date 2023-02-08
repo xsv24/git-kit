@@ -1,7 +1,7 @@
 use crate::{
     app_context::AppContext,
     domain::{
-        adapters::{Git, Store, prompt::Prompter},
+        adapters::{prompt::Prompter, Git, Store},
         commands::checkout,
     },
 };
