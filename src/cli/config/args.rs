@@ -1,11 +1,14 @@
 use clap::Args;
 
-use crate::domain::{
-    adapters::{
-        prompt::{Prompter, SelectItem},
-        Store,
+use crate::{
+    domain::{
+        adapters::{
+            prompt::{Prompter, SelectItem},
+            Store,
+        },
+        models::{Config, ConfigKey, ConfigStatus},
     },
-    models::{Config, ConfigKey, ConfigStatus},
+    entry::Interactive,
 };
 
 #[derive(Debug, Clone, clap::Subcommand)]
@@ -45,10 +48,15 @@ impl ConfigSet {
         self,
         store: &S,
         prompt: P,
+        interactive: &Interactive,
     ) -> anyhow::Result<ConfigKey> {
         Ok(match self.name {
             Some(name) => name.into(),
-            None => prompt_configuration_select(store.get_configurations()?, prompt)?,
+            None => prompt_configuration_select(
+                store.get_configurations()?,
+                prompt,
+                interactive.to_owned(),
+            )?,
         })
     }
 }
@@ -56,7 +64,15 @@ impl ConfigSet {
 fn prompt_configuration_select<P: Prompter>(
     configurations: Vec<Config>,
     selector: P,
+    interactive: Interactive,
 ) -> anyhow::Result<ConfigKey> {
+    if interactive == Interactive::Disable {
+        anyhow::bail!(clap::Error::raw(
+            clap::ErrorKind::MissingRequiredArgument,
+            "'name' is required"
+        ))
+    }
+
     let configurations: Vec<SelectItem<ConfigKey>> = configurations
         .iter()
         .map(|config| SelectItem {
