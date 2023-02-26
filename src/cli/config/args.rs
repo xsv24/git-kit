@@ -142,7 +142,7 @@ mod tests {
     }
 
     impl Prompter for PromptTest {
-        fn text(&self, _: &str) -> anyhow::Result<Option<String>> {
+        fn text(&self, _: &str, _: Option<String>) -> anyhow::Result<Option<String>> {
             Err(anyhow::anyhow!("Text prompt should not be invoked"))
         }
 

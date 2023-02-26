@@ -1,14 +1,13 @@
 use std::fmt::Display;
 
-use colored::Colorize;
-use inquire::{
-    ui::{Color, RenderConfig, Styled},
-    Select, Text,
-};
-
 use crate::{
     domain::adapters::prompt::{Prompter, SelectItem},
     utils::string::OptionStr,
+};
+use colored::Colorize;
+use inquire::{
+    ui::{Attributes, Color, RenderConfig, StyleSheet, Styled},
+    Select, Text,
 };
 
 impl<T> Display for SelectItem<T> {
@@ -39,6 +38,9 @@ impl Prompt {
             highlighted_option_prefix: Styled::new("➜").with_fg(Color::LightBlue),
             selected_checkbox: Styled::new("✅").with_fg(Color::LightGreen),
             unselected_checkbox: Styled::new("🔳"),
+            default_value: StyleSheet::new()
+                .with_attr(Attributes::ITALIC)
+                .with_fg(Color::DarkGrey),
             ..RenderConfig::default()
         }
     }
@@ -66,8 +68,12 @@ impl Prompter for Prompt {
         Ok(select.prompt()?)
     }
 
-    fn text(&self, question: &str) -> anyhow::Result<Option<String>> {
-        let result = Text::new(question).prompt_skippable()?;
+    fn text(&self, question: &str, default: Option<String>) -> anyhow::Result<Option<String>> {
+        let result = Text::new(question)
+            .with_default(&default.unwrap_or("".into()))
+            .with_render_config(Self::get_render_config())
+            .prompt_skippable()?;
+
         Ok(result.none_if_empty())
     }
 }
