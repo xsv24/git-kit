@@ -86,6 +86,7 @@ fn prompt_configuration_select<P: Prompter>(
 
     Ok(selected.value)
 }
+
 #[cfg(test)]
 mod tests {
     use anyhow::Context;

@@ -25,16 +25,17 @@ impl Arguments {
     pub fn try_prompt_with_defaults<P: Prompter>(
         &self,
         branch: Option<Branch>,
-        prompt: P
+        prompt: P,
     ) -> anyhow::Result<Context> {
         let ticket = self
             .ticket
             .clone()
             .or_else_try(|| prompt.text("Ticket:", branch.clone().map(|b| b.ticket)))?;
 
-        let scope = self.scope.clone().or_else_try(|| {
-            prompt.text("Scope:", branch.clone().map(|b| b.scope).flatten())
-        })?;
+        let scope = self
+            .scope
+            .clone()
+            .or_else_try(|| prompt.text("Scope:", branch.clone().map(|b| b.scope).flatten()))?;
 
         let link = self
             .link
@@ -42,7 +43,9 @@ impl Arguments {
             .or_else_try(|| prompt.text("Link:", branch.map(|b| b.link).flatten()))?;
 
         Ok(Context {
-            ticket, scope, link
+            ticket,
+            scope,
+            link,
         })
     }
 
