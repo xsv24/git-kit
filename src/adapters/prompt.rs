@@ -25,11 +25,7 @@ pub struct Prompt;
 
 impl Prompt {
     fn filter<T>(input: &str, option: &SelectItem<T>) -> bool {
-        if option.name.to_lowercase().contains(&input.to_lowercase()) {
-            true
-        } else {
-            false
-        }
+        option.name.to_lowercase().contains(&input.to_lowercase())
     }
 
     fn get_render_config() -> RenderConfig {

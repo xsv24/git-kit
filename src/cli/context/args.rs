@@ -35,12 +35,12 @@ impl Arguments {
         let scope = self
             .scope
             .clone()
-            .or_else_try(|| prompt.text("Scope:", branch.clone().map(|b| b.scope).flatten()))?;
+            .or_else_try(|| prompt.text("Scope:", branch.clone().and_then(|b| b.scope)))?;
 
         let link = self
             .link
             .clone()
-            .or_else_try(|| prompt.text("Link:", branch.map(|b| b.link).flatten()))?;
+            .or_else_try(|| prompt.text("Link:", branch.and_then(|b| b.link)))?;
 
         Ok(Context {
             ticket,
@@ -56,7 +56,7 @@ impl Arguments {
         branch: Option<Branch>,
     ) -> anyhow::Result<Context> {
         let domain = match interactive {
-            Interactive::Enable => Self::try_prompt_with_defaults(&self, branch, prompt)?,
+            Interactive::Enable => self.try_prompt_with_defaults(branch, prompt)?,
             Interactive::Disable => Context {
                 ticket: self.ticket.clone(),
                 scope: self.scope.clone(),
