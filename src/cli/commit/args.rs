@@ -87,7 +87,10 @@ mod tests {
     use anyhow::Context;
     use fake::{Fake, Faker};
 
-    use crate::{domain::adapters::prompt::SelectItem, template_config::CommitConfig};
+    use crate::{
+        domain::{adapters::prompt::SelectItem, errors::UserInputError},
+        template_config::CommitConfig,
+    };
 
     #[test]
     fn try_into_domain_with_no_interactive_prompts() -> anyhow::Result<()> {
@@ -234,20 +237,25 @@ mod tests {
     }
 
     impl Prompter for PromptTest {
-        fn text(&self, _: &str, _: Option<String>) -> anyhow::Result<Option<String>> {
+        fn text(&self, name: &str, _: Option<String>) -> Result<Option<String>, UserInputError> {
             match &self.text_result {
                 Ok(option) => Ok(option.clone()),
-                Err(_) => Err(anyhow::anyhow!("Text prompt failed")),
+                Err(_) => Err(UserInputError::Validation { name: name.into() }),
             }
         }
 
-        fn select<T>(&self, _: &str, options: Vec<SelectItem<T>>) -> anyhow::Result<SelectItem<T>> {
+        fn select<T>(
+            &self,
+            name: &str,
+            options: Vec<SelectItem<T>>,
+        ) -> Result<SelectItem<T>, UserInputError> {
             match &self.select_item_name {
-                Ok(name) => Ok(options
+                Ok(name) => options
                     .into_iter()
                     .find(|i| i.name == name.clone())
-                    .context("Failed to get item")?),
-                Err(_) => Err(anyhow::anyhow!("Select prompt failed")),
+                    .context("Failed to get item")
+                    .map_err(|_| UserInputError::Validation { name: name.into() }),
+                Err(_) => Err(UserInputError::Validation { name: name.into() }),
             }
         }
     }
