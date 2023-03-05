@@ -94,7 +94,10 @@ mod tests {
     use std::path::PathBuf;
 
     use super::*;
-    use crate::domain::adapters::prompt::{Prompter, SelectItem};
+    use crate::domain::{
+        adapters::prompt::{Prompter, SelectItem},
+        errors::UserInputError,
+    };
 
     #[test]
     fn with_interactive_enabled_select_prompt_is_used() {
@@ -143,17 +146,22 @@ mod tests {
     }
 
     impl Prompter for PromptTest {
-        fn text(&self, _: &str, _: Option<String>) -> anyhow::Result<Option<String>> {
-            Err(anyhow::anyhow!("Text prompt should not be invoked"))
+        fn text(&self, name: &str, _: Option<String>) -> Result<Option<String>, UserInputError> {
+            Err(UserInputError::Validation { name: name.into() })
         }
 
-        fn select<T>(&self, _: &str, options: Vec<SelectItem<T>>) -> anyhow::Result<SelectItem<T>> {
+        fn select<T>(
+            &self,
+            name: &str,
+            options: Vec<SelectItem<T>>,
+        ) -> Result<SelectItem<T>, UserInputError> {
             match &self.select_item_name {
                 Ok(name) => Ok(options
                     .into_iter()
                     .find(|i| i.name == name.clone())
-                    .context("Failed to get item")?),
-                Err(_) => Err(anyhow::anyhow!("Select prompt failed")),
+                    .context("Failed to get item")
+                    .map_err(|_| UserInputError::Validation { name: name.into() })?),
+                Err(_) => Err(UserInputError::Validation { name: name.into() }),
             }
         }
     }
