@@ -19,7 +19,7 @@ pub fn handler<G: Git, S: Store>(git: &G, store: &S, args: Context) -> anyhow::R
     let repo_name = git.repository_name()?;
     let branch_name = git.branch_name()?;
 
-    let branch = Branch::new(&branch_name, &repo_name, args.ticket, args.link, args.scope)?;
+    let branch = Branch::new(&branch_name, &repo_name, args.ticket, args.link, args.scope);
     store.persist_branch(&branch)?;
 
     Ok(branch)

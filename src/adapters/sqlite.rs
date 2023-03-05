@@ -617,7 +617,7 @@ mod tests {
             Faker.fake(),
             Faker.fake(),
             Faker.fake(),
-        )?)
+        ))
     }
 
     fn select_branch_row(conn: &Connection) -> anyhow::Result<Branch> {
