@@ -3,6 +3,7 @@ use crate::{
     domain::{
         adapters::{prompt::Prompter, Git, Store},
         commands::checkout,
+        errors::Errors,
     },
 };
 
@@ -13,7 +14,10 @@ pub fn handler<G: Git, S: Store, P: Prompter>(
     args: Arguments,
     prompt: P,
 ) -> anyhow::Result<()> {
-    let checkout = args.try_into_domain(prompt, &context.interactive)?;
+    let checkout = args
+        .try_into_domain(prompt, &context.interactive)
+        .map_err(|e| Errors::UserInput(e))?;
+
     checkout::handler(&context.git, &context.store, checkout)?;
 
     Ok(())
