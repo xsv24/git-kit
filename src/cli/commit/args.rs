@@ -6,6 +6,7 @@ use crate::{
     domain::{
         adapters::prompt::{Prompter, SelectItem},
         commands::commit::Commit,
+        errors::UserInputError,
     },
     entry::Interactive,
     template_config::{Template, TemplateConfig},
@@ -35,7 +36,7 @@ impl Arguments {
         config: &TemplateConfig,
         prompter: P,
         interactive: &Interactive,
-    ) -> anyhow::Result<Commit> {
+    ) -> Result<Commit, UserInputError> {
         let template = match &self.template {
             Some(template) => template.into(),
             None => Self::prompt_template_select(
@@ -58,12 +59,11 @@ impl Arguments {
         templates: HashMap<String, Template>,
         prompter: P,
         interactive: Interactive,
-    ) -> anyhow::Result<String> {
+    ) -> Result<String, UserInputError> {
         if interactive == Interactive::Disable {
-            anyhow::bail!(clap::Error::raw(
-                clap::ErrorKind::MissingRequiredArgument,
-                "'template' is required"
-            ))
+            return Err(UserInputError::Required {
+                name: format!("template"),
+            });
         }
 
         let items = templates
@@ -228,7 +228,7 @@ mod tests {
             .try_into_domain(&config, prompt, &Interactive::Disable)
             .unwrap_err();
 
-        assert_eq!(error.to_string(), "error: 'template' is required");
+        assert_eq!(error.to_string(), "Missing required \"template\" input");
     }
 
     pub struct PromptTest {

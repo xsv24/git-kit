@@ -8,6 +8,12 @@ pub enum Errors {
     #[error(transparent)]
     UserInput(UserInputError),
 
+    #[error("Invalid Configuration: {message}")]
+    Configuration {
+        message: String,
+        source: anyhow::Error,
+    },
+
     #[error("Failed to persist")]
     PersistError,
 
@@ -17,9 +23,16 @@ pub enum Errors {
 
 #[derive(Error, Debug)]
 pub enum UserInputError {
+    #[error("Missing required {name:?} input")]
+    Required { name: String },
+
+    #[error("Invalid command {name:?} found")]
+    InvalidCommand { name: String },
+
     #[error("Input prompt cancelled by user")]
     Cancelled,
-    #[error("Invalid user input '{name:?}' found")]
+
+    #[error("Invalid user input {name:?} found")]
     Validation { name: String },
 }
 
