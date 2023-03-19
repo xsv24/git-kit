@@ -55,7 +55,7 @@ impl domain::adapters::Store for Sqlite {
         Ok(())
     }
 
-    fn get_branch(&self, branch: &str, repo: &str) -> anyhow::Result<Branch> {
+    fn get_branch(&self, branch: &str, repo: &str) -> Result<Branch, PersistError> {
         let name = format!("{}-{}", repo.trim(), branch.trim());
 
         log::info!(
@@ -68,7 +68,7 @@ impl domain::adapters::Store for Sqlite {
             "SELECT name, ticket, data, created, link, scope FROM branch where name = ?",
             [name],
             |row| Branch::try_from(row),
-        )?;
+        ).map_err(|e| PersistError::into("branch", "Failed to retrieve branch '{name}'", e))?;
 
         Ok(branch)
     }
@@ -301,7 +301,9 @@ impl PersistError {
                 name: name.into(),
                 source: error.into(),
             },
-            rusqlite::Error::QueryReturnedNoRows => PersistError::NotFound,
+            rusqlite::Error::QueryReturnedNoRows => PersistError::NotFound {
+                name: name.into()
+            },
             rusqlite::Error::FromSqlConversionFailure(_, _, _)
             | rusqlite::Error::InvalidParameterCount(_, _)
             | rusqlite::Error::InvalidColumnIndex(_)

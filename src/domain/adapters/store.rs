@@ -6,7 +6,7 @@ use crate::domain::{
 pub trait Store {
     fn persist_branch(&self, branch: &Branch) -> anyhow::Result<()>;
 
-    fn get_branch(&self, branch: &str, repo: &str) -> anyhow::Result<Branch>;
+    fn get_branch(&self, branch: &str, repo: &str) -> Result<Branch, PersistError>;
 
     fn persist_config(&self, config: &Config) -> Result<(), Errors>;
 

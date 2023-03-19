@@ -123,7 +123,7 @@ fn checkout_on_fail_to_checkout_branch_nothing_is_persisted() -> anyhow::Result<
         .get_branch(&command.name, &repo)
         .expect_err("Expected error as there should be no stored branches.");
 
-    assert_eq!(error.to_string(), "Query returned no rows");
+    assert_eq!(error.to_string(), "Persisted \"branch\" not found");
 
     context.close()?;
 

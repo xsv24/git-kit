@@ -55,8 +55,8 @@ pub enum PersistError {
         source: Option<anyhow::Error>,
     },
 
-    #[error("Record not found")]
-    NotFound,
+    #[error("Persisted {name:?} not found")]
+    NotFound { name: String },
 
     #[error("Validation error")]
     Validation { name: String, source: anyhow::Error },
