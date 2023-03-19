@@ -8,6 +8,7 @@ use crate::{
     adapters::{sqlite::Sqlite, Git},
     domain::{
         adapters::{Git as _, Store},
+        errors::{Errors, GitError},
         models::{Config, ConfigKey, ConfigStatus},
     },
 };
@@ -21,14 +22,26 @@ impl AppConfig {
         once_off_config_path: Option<String>,
         git: &Git,
         store: &Sqlite,
-    ) -> anyhow::Result<AppConfig> {
+    ) -> Result<AppConfig, Errors> {
         let config = match once_off_config_path {
-            Some(path) => Config::new(ConfigKey::Once, path, ConfigStatus::Active),
-            None => store.get_configuration(None),
+            Some(path) => Config::new(ConfigKey::Once, path, ConfigStatus::Active).map_err(|e| {
+                Errors::Configuration {
+                    message: "Invalid configation given".into(),
+                    source: e.into(),
+                }
+            }),
+            None => store
+                .get_configuration(None)
+                .map_err(|e| Errors::Configuration {
+                    message: "Failed to get current 'active' config".into(),
+                    source: e.into(),
+                }),
         }?;
 
-        let git_root_dir = git.root_directory()?;
-        let config = Self::map_config_overrides(config, git_root_dir)?;
+        let git_root_dir = git
+            .root_directory()
+            .map_err(|_| Errors::Git(GitError::Read))?;
+        let config = Self::map_config_overrides(config, git_root_dir);
 
         Ok(AppConfig { config })
     }
@@ -53,33 +66,33 @@ impl AppConfig {
         repo_config.join(filename)
     }
 
-    fn map_config_overrides(config: Config, repo_config: PathBuf) -> anyhow::Result<Config> {
+    fn map_config_overrides(config: Config, repo_config: PathBuf) -> Config {
         let repo_config = AppConfig::join_config_filename(&repo_config);
 
         match (config.key.clone(), repo_config.exists()) {
             // Once off override takes priority 1
             (ConfigKey::Once, _) => {
                 log::info!("⏳ Loading once off config...");
-                Ok(config)
+                config
             }
             // Repository has config file priority 2
             (ConfigKey::Local, _) | (_, true) => {
                 log::info!("⏳ Loading local repo config...");
-                Ok(Config {
+                Config {
                     key: ConfigKey::Local,
                     path: repo_config,
                     status: config.status,
-                })
+                }
             }
             // User has set custom config file and is active priority 3
             (ConfigKey::User(key), _) => {
                 log::info!("⏳ Loading user '{:?}' config...", key);
-                Ok(config)
+                config
             }
             // No set user config use provided defaults priority 4
             (ConfigKey::Default, _) => {
                 log::info!("⏳ Loading global config...");
-                Ok(config)
+                config
             }
         }
     }
@@ -110,7 +123,7 @@ mod tests {
                 status: ConfigStatus::Active,
             },
             valid_repo_dir,
-        )?;
+        );
 
         assert_eq!(once_path, config.path);
         assert_eq!(ConfigKey::Once, config.key);
@@ -135,7 +148,7 @@ mod tests {
                     status: ConfigStatus::Active,
                 },
                 repo_root_with_config.clone(),
-            )?;
+            );
 
             assert_eq!(config_repo, actual.path);
             assert_eq!(ConfigKey::Local, actual.key);
@@ -160,7 +173,7 @@ mod tests {
                 status: ConfigStatus::Active,
             },
             repo_non_existing,
-        )?;
+        );
 
         assert_eq!(key, config.key);
         assert_eq!(user_path, config.path);
@@ -181,7 +194,7 @@ mod tests {
                 status: ConfigStatus::Active,
             },
             repo_non_existing,
-        )?;
+        );
 
         assert_eq!(default_path, config.path);
         assert_eq!(ConfigKey::Default, config.key);

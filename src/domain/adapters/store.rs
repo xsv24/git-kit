@@ -14,7 +14,7 @@ pub trait Store {
 
     fn get_configurations(&self) -> anyhow::Result<Vec<Config>>;
 
-    fn get_configuration(&self, key: Option<String>) -> anyhow::Result<Config>;
+    fn get_configuration(&self, key: Option<String>) -> Result<Config, PersistError>;
 
     fn close(self) -> anyhow::Result<()>;
 }

@@ -84,7 +84,7 @@ impl domain::adapters::Store for Sqlite {
         let key: String = config.key.clone().into();
         let path = (&config.path)
             .try_convert()
-            .map_err(|e| Errors::ValidationError {
+            .map_err(|_| Errors::ValidationError {
                 message: "Failed to convert path to string".into(),
             })?;
 
@@ -95,9 +95,8 @@ impl domain::adapters::Store for Sqlite {
                 "REPLACE INTO config (key, path, status) VALUES (?1, ?2, ?3)",
                 (key, path, String::from(ConfigStatus::Active)),
             )
-            .map_err(|e| Errors::ValidationError {
-                message: "Failed to update config.".into(),
-            })?;
+            .map_err(|e| PersistError::into("config", "Failed to update config.", e))
+            .map_err(|e| Errors::PersistError(e))?;
 
         Ok(())
     }
@@ -162,22 +161,27 @@ impl domain::adapters::Store for Sqlite {
             })
     }
 
-    fn get_configuration(&self, key: Option<String>) -> anyhow::Result<Config> {
+    fn get_configuration(&self, key: Option<String>) -> Result<Config, PersistError> {
         let config = match key {
-            Some(key) => {
-                self.connection
-                    .query_row("SELECT * FROM config WHERE key = ?1", [key], |row| {
-                        Config::try_from(row)
-                    })
-            }
-            None => self.connection.query_row(
-                "SELECT * FROM config WHERE status = ?1",
-                [String::from(ConfigStatus::Active)],
-                |row| Config::try_from(row),
-            ),
-        }?;
+            Some(key) => self
+                .connection
+                .query_row("SELECT * FROM config WHERE key = ?1", [key], |row| {
+                    Config::try_from(row)
+                })
+                .map_err(|e| PersistError::into("config", "Failed to retrieve config '{key}'.", e)),
+            None => self
+                .connection
+                .query_row(
+                    "SELECT * FROM config WHERE status = ?1",
+                    [String::from(ConfigStatus::Active)],
+                    |row| Config::try_from(row),
+                )
+                .map_err(|e| {
+                    PersistError::into("config", "Failed to retrieve 'active' config.", e)
+                }),
+        };
 
-        Ok(config)
+        Ok(config?)
     }
 
     fn get_configurations(&self) -> anyhow::Result<Vec<Config>> {
