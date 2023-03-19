@@ -14,11 +14,11 @@ pub enum Errors {
         source: anyhow::Error,
     },
 
-    #[error("Failed to persist")]
-    PersistError,
+    #[error(transparent)]
+    PersistError(PersistError),
 
     #[error("Validation error")]
-    ValidationError,
+    ValidationError { message: String },
 }
 
 #[derive(Error, Debug)]
@@ -42,4 +42,25 @@ pub enum GitError {
     Read,
     #[error("Failed to write to git")]
     Write,
+}
+
+#[derive(Error, Debug)]
+pub enum PersistError {
+    #[error("Persisted data has been corrupted or is out of date")]
+    Configuration(anyhow::Error),
+
+    #[error("Persisted {name:?} has been corrupted or is out of date")]
+    Corrupted {
+        name: String,
+        source: Option<anyhow::Error>,
+    },
+
+    #[error("Record not found")]
+    NotFound,
+
+    #[error("Validation error")]
+    Validation { name: String, source: anyhow::Error },
+
+    #[error(transparent)]
+    Other(anyhow::Error),
 }

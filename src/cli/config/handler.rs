@@ -2,8 +2,10 @@ use crate::domain::adapters::prompt::Prompter;
 use crate::domain::adapters::Store;
 use crate::domain::models::{ConfigKey, ConfigStatus};
 use crate::entry::Interactive;
+use crate::utils::TryConvert;
 
 use super::Arguments;
+use anyhow::Context;
 use colored::Colorize;
 
 pub fn handler<S: Store, P: Prompter>(
@@ -13,11 +15,19 @@ pub fn handler<S: Store, P: Prompter>(
     prompt: P,
     interactive: &Interactive,
 ) -> anyhow::Result<()> {
-    local_config_warning(config_key)?;
+    local_config_warning(config_key);
 
     match arguments {
         Arguments::Add(args) => {
             let config = args.try_into_domain()?;
+            if config.key == ConfigKey::Default {
+                anyhow::bail!("Cannot override 'default' config!");
+            }
+
+            let _ = (&config.path)
+                .try_convert()
+                .context("Failed to convert path to string")?;
+
             store.persist_config(&config)?;
             println!("🟢 {} (Active)", config.key.to_string().green());
         }
@@ -50,7 +60,7 @@ pub fn handler<S: Store, P: Prompter>(
     Ok(())
 }
 
-fn local_config_warning(config_key: &ConfigKey) -> anyhow::Result<()> {
+fn local_config_warning(config_key: &ConfigKey) {
     let warn_message = match config_key {
         ConfigKey::Once => Some("'once off' --config"),
         ConfigKey::Local => Some("'local' repository"),
@@ -64,5 +74,4 @@ fn local_config_warning(config_key: &ConfigKey) -> anyhow::Result<()> {
             msg
         );
     }
-    Ok(())
 }

@@ -62,7 +62,8 @@ impl TemplateConfig {
 #[cfg(test)]
 mod tests {
     use crate::{
-        template_config::{CommitConfig, Template, TemplateConfig}, domain::errors::UserInputError,
+        domain::errors::UserInputError,
+        template_config::{CommitConfig, Template, TemplateConfig},
     };
     use fake::{Fake, Faker};
     use std::collections::HashMap;

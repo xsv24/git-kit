@@ -5,6 +5,7 @@ use rusqlite::{types::Type, Connection, Row, Transaction};
 use crate::{
     domain::{
         self,
+        errors::{Errors, PersistError},
         models::{Branch, Config, ConfigKey, ConfigStatus},
     },
     utils::TryConvert,
@@ -72,13 +73,20 @@ impl domain::adapters::Store for Sqlite {
         Ok(branch)
     }
 
-    fn persist_config(&self, config: &Config) -> anyhow::Result<()> {
+    fn persist_config(&self, config: &Config) -> Result<(), Errors> {
+        // TODO: Move this to the domain
         if config.key == ConfigKey::Default {
-            anyhow::bail!("Cannot override 'default' config!");
+            return Err(Errors::ValidationError {
+                message: "Cannot override 'default' config!".into(),
+            });
         }
 
         let key: String = config.key.clone().into();
-        let path = (&config.path).try_convert()?;
+        let path = (&config.path)
+            .try_convert()
+            .map_err(|e| Errors::ValidationError {
+                message: "Failed to convert path to string".into(),
+            })?;
 
         log::info!("insert or update user config '{}' path '{}'", &key, &path);
 
@@ -87,13 +95,15 @@ impl domain::adapters::Store for Sqlite {
                 "REPLACE INTO config (key, path, status) VALUES (?1, ?2, ?3)",
                 (key, path, String::from(ConfigStatus::Active)),
             )
-            .context("Failed to update config.")?;
+            .map_err(|e| Errors::ValidationError {
+                message: "Failed to update config.".into(),
+            })?;
 
         Ok(())
     }
 
-    fn set_active_config(&mut self, key: &ConfigKey) -> anyhow::Result<Config> {
-        let transaction = self.transaction()?;
+    fn set_active_config(&mut self, key: &ConfigKey) -> Result<Config, PersistError> {
+        let transaction = self.transaction().map_err(|e| PersistError::Other(e))?;
 
         let key: String = key.to_owned().into();
 
@@ -105,7 +115,13 @@ impl domain::adapters::Store for Sqlite {
         // Check the record actually exists before changing statuses.
         transaction
             .query_row("SELECT * FROM config where key = ?1;", [&key], |_| Ok(()))
-            .with_context(|| format!("Configuration '{}' does not exist.", &key))?;
+            .map_err(|e| {
+                PersistError::into(
+                    "config",
+                    format!("Configuration '{key}' does not exist."),
+                    e,
+                )
+            })?;
 
         // Update any 'ACTIVE' config to 'DISABLED'
         transaction
@@ -113,7 +129,13 @@ impl domain::adapters::Store for Sqlite {
                 "UPDATE config SET status = ?1 WHERE status = ?2;",
                 (&disabled, &active),
             )
-            .with_context(|| format!("Failed to set any '{disabled}' config to '{active}'."))?;
+            .map_err(|e| {
+                PersistError::into(
+                    "config",
+                    format!("Failed to set any '{disabled}' config to '{active}'."),
+                    e,
+                )
+            })?;
 
         // Update the desired config to 'ACTIVE'
         transaction
@@ -121,13 +143,23 @@ impl domain::adapters::Store for Sqlite {
                 "UPDATE config SET status = ?1 WHERE key = ?2;",
                 (&active, &key),
             )
-            .with_context(|| format!("Failed to update config status to '{active}'."))?;
+            .map_err(|e| {
+                PersistError::into(
+                    "config",
+                    format!("Failed to update config status to '{active}'."),
+                    e,
+                )
+            })?;
 
-        transaction
-            .commit()
-            .context("Failed to commit transaction to update config")?;
+        transaction.commit().map_err(|e| {
+            PersistError::into("config", "Failed to commit transaction to update config", e)
+        })?;
 
         self.get_configuration(Some(key))
+            .map_err(|e| PersistError::Validation {
+                name: "config".into(),
+                source: e.into(),
+            })
     }
 
     fn get_configuration(&self, key: Option<String>) -> anyhow::Result<Config> {
@@ -230,6 +262,43 @@ impl<'a> TryFrom<&Row<'a>> for Branch {
         };
 
         Ok(branch)
+    }
+}
+
+impl PersistError {
+    fn into<S>(name: &str, message: S, error: rusqlite::Error) -> PersistError
+    where
+        S: Into<String>,
+    {
+        log::error!("{}\n{}", message.into(), &error);
+
+        match error {
+            rusqlite::Error::InvalidPath(_) => PersistError::Configuration(error.into()),
+            rusqlite::Error::ExecuteReturnedResults
+            | rusqlite::Error::SqliteSingleThreadedMode
+            | rusqlite::Error::StatementChangedRows(_)
+            | rusqlite::Error::MultipleStatement
+            | rusqlite::Error::IntegralValueOutOfRange(_, _)
+            | rusqlite::Error::InvalidQuery
+            | rusqlite::Error::NulError(_)
+            | rusqlite::Error::Utf8Error(_)
+            | rusqlite::Error::ToSqlConversionFailure(_) => PersistError::Validation {
+                name: name.into(),
+                source: error.into(),
+            },
+            rusqlite::Error::QueryReturnedNoRows => PersistError::NotFound,
+            rusqlite::Error::FromSqlConversionFailure(_, _, _)
+            | rusqlite::Error::InvalidParameterCount(_, _)
+            | rusqlite::Error::InvalidColumnIndex(_)
+            | rusqlite::Error::InvalidParameterName(_)
+            | rusqlite::Error::InvalidColumnName(_)
+            | rusqlite::Error::InvalidColumnType(_, _, _)
+            | rusqlite::Error::SqlInputError { .. } => PersistError::Corrupted {
+                name: name.into(),
+                source: Some(error.into()),
+            },
+            rusqlite::Error::SqliteFailure(_, _) | _ => PersistError::Other(error.into()),
+        }
     }
 }
 
