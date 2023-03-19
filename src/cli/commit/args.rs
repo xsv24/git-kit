@@ -75,7 +75,7 @@ impl Arguments {
             })
             .collect::<Vec<_>>();
 
-        let selected = prompter.select("Template:", items)?;
+        let selected = prompter.select("Template", items)?;
 
         Ok(selected.name)
     }

@@ -12,7 +12,7 @@ pub trait Store {
 
     fn set_active_config(&mut self, key: &ConfigKey) -> Result<Config, PersistError>;
 
-    fn get_configurations(&self) -> anyhow::Result<Vec<Config>>;
+    fn get_configurations(&self) -> Result<Vec<Config>, PersistError>;
 
     fn get_configuration(&self, key: Option<String>) -> Result<Config, PersistError>;
 

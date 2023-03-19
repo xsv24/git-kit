@@ -184,16 +184,27 @@ impl domain::adapters::Store for Sqlite {
         Ok(config?)
     }
 
-    fn get_configurations(&self) -> anyhow::Result<Vec<Config>> {
-        let mut statement = self.connection.prepare("SELECT * FROM config")?;
+    fn get_configurations(&self) -> Result<Vec<Config>, PersistError> {
+        let mut statement = self
+            .connection
+            .prepare("SELECT * FROM config")
+            .map_err(|e| PersistError::into("config", "Failed to retrieve configs", e))?;
 
         let configs: Vec<_> = statement
             .query_map([], |row| {
                 let config = Config::try_from(row)?;
                 Ok(config)
+            })
+            .map_err(|e| PersistError::Corrupted {
+                name: "config".into(),
+                source: Some(e.into()),
             })?
             .into_iter()
-            .collect::<Result<_, _>>()?;
+            .collect::<Result<_, _>>()
+            .map_err(|e| PersistError::Corrupted {
+                name: "config".into(),
+                source: Some(e.into()),
+            })?;
 
         Ok(configs)
     }
