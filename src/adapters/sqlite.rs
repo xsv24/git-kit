@@ -31,7 +31,7 @@ impl Sqlite {
 }
 
 impl domain::adapters::Store for Sqlite {
-    fn persist_branch(&self, branch: &Branch) -> anyhow::Result<()> {
+    fn persist_branch(&self, branch: &Branch) -> Result<(), PersistError> {
         log::info!(
             "insert or update for '{}' branch with ticket '{}'",
             branch.name,
@@ -50,7 +50,7 @@ impl domain::adapters::Store for Sqlite {
                     &branch.scope
                 ),
             )
-            .with_context(|| format!("Failed to update branch '{}'", &branch.name))?;
+            .map_err(|e| PersistError::into("branch", format!("Failed to update branch '{}'", branch.name), e))?;
 
         Ok(())
     }
