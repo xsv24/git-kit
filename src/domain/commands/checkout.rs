@@ -35,7 +35,9 @@ pub fn handler<G: Git, S: Store>(git: &G, store: &S, args: Checkout) -> Result<B
         .map_err(|_| Errors::Git(GitError::Read))?;
 
     let branch = Branch::new(&args.name, &repo_name, args.ticket, args.link, args.scope);
-    store.persist_branch(&branch).map_err(|e| Errors::PersistError(e))?;
+    store
+        .persist_branch(&branch)
+        .map_err(|e| Errors::PersistError(e))?;
 
     Ok(branch)
 }

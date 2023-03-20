@@ -99,10 +99,10 @@ mod tests {
             },
         };
 
-        let _result = config.get_template_config(&key).unwrap_err();
+        let result = config.get_template_config(&key).unwrap_err();
         assert!(matches!(
-            UserInputError::InvalidCommand { name: key },
-            _result
+            result,
+            UserInputError::InvalidCommand { name } if name == key,
         ));
     }
 }
