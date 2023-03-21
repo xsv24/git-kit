@@ -1,5 +1,6 @@
 mod git;
 pub mod prompt;
-pub mod sqlite;
+mod store;
 
 pub use git::Git;
+pub use store::sqlite;

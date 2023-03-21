@@ -4,6 +4,7 @@ use fake::{Fake, Faker};
 use git_kit::domain::{
     adapters::{CheckoutStatus, Store},
     commands::checkout::{handler, Checkout},
+    errors::{Errors, GitError, PersistError},
     models::Branch,
 };
 
@@ -98,7 +99,7 @@ fn checkout_with_branch_already_exists_does_not_error() -> anyhow::Result<()> {
 }
 
 #[test]
-fn checkout_on_fail_to_checkout_branch_nothing_is_persisted() -> anyhow::Result<()> {
+fn checkout_on_fail_to_checkout_branch_nothing_is_persisted() {
     // Arrange
     let command = fake_checkout_args();
 
@@ -110,24 +111,25 @@ fn checkout_on_fail_to_checkout_branch_nothing_is_persisted() -> anyhow::Result<
         ..GitCommandMock::fake()
     };
 
-    let context = fake_context(git_commands.clone(), fake_config())?;
+    let context = fake_context(git_commands.clone(), fake_config()).unwrap();
 
     // Act
-    let result = handler(&context.git, &context.store, command.clone());
+    let error = handler(&context.git, &context.store, command.clone()).unwrap_err();
 
     // Assert
-    assert!(result.is_err());
+    assert!(matches!(error, Errors::Git(GitError::Write)));
 
     let error = context
         .store
         .get_branch(&command.name, &repo)
         .expect_err("Expected error as there should be no stored branches.");
 
-    assert_eq!(error.to_string(), "Persisted \"branch\" not found");
-
-    context.close()?;
-
-    Ok(())
+    assert!(matches!(error, PersistError::NotFound { ref name } if name == "branch"));
+    assert_eq!(
+        error.to_string(),
+        "Requested branch not found in persisted store"
+    );
+    context.close().unwrap();
 }
 
 #[test]

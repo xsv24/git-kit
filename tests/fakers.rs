@@ -39,7 +39,7 @@ pub fn fake_context<'a, C: Git>(git: C, config: Config) -> anyhow::Result<AppCon
     )?;
 
     let context = AppContext {
-        store: Sqlite::new(connection)?,
+        store: Sqlite::new(connection),
         config,
         git,
         interactive: Interactive::Enable,

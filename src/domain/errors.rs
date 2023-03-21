@@ -40,14 +40,15 @@ pub enum UserInputError {
 pub enum GitError {
     #[error("Failed to read a git provided value")]
     Read,
+
     #[error("Failed to write to git")]
     Write,
 }
 
 #[derive(Error, Debug)]
 pub enum PersistError {
-    #[error("Persisted data has been corrupted or is out of date")]
-    Configuration(anyhow::Error),
+    #[error("Invalid store configuration")]
+    Configuration,
 
     #[error("Persisted {name:?} has been corrupted or is out of date")]
     Corrupted {
@@ -55,12 +56,12 @@ pub enum PersistError {
         source: Option<anyhow::Error>,
     },
 
-    #[error("Persisted {name:?} not found")]
+    #[error("Requested {name} not found in persisted store")]
     NotFound { name: String },
 
-    #[error("Validation error")]
+    #[error("Failed to persist or retrieve {name:?}")]
     Validation { name: String, source: anyhow::Error },
 
-    #[error(transparent)]
-    Other(anyhow::Error),
+    #[error("Unknown error occurred while connecting persisted store")]
+    Unknown(anyhow::Error),
 }

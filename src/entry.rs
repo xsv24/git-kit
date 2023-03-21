@@ -4,7 +4,7 @@ use crate::adapters::{sqlite::Sqlite, Git};
 use crate::app_config::AppConfig;
 use crate::app_context::AppContext;
 use crate::cli::{commands::Commands, log::LogLevel};
-use anyhow::{Context, Ok};
+use anyhow::Ok;
 use clap::clap_derive::ArgEnum;
 use clap::Parser;
 
@@ -45,7 +45,7 @@ impl Cli {
         let git = Git;
 
         let connection = AppConfig::db_connection()?;
-        let store = Sqlite::new(connection).context("Failed to initialize 'Sqlite'")?;
+        let store = Sqlite::new(connection);
 
         let app_config = AppConfig::new(self.config.clone(), &git, &store)?;
 
