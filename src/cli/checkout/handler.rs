@@ -13,7 +13,7 @@ pub fn handler<G: Git, S: Store, P: Prompter>(
     context: &AppContext<G, S>,
     args: Arguments,
     prompt: P,
-) -> anyhow::Result<()> {
+) -> Result<(), Errors> {
     let checkout = args
         .try_into_domain(prompt, &context.interactive)
         .map_err(|e| Errors::UserInput(e))?;

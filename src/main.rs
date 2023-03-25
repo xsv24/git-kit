@@ -10,5 +10,7 @@ fn main() -> anyhow::Result<()> {
     // close the connection no matter if we error or not.
     context.close()?;
 
-    result
+    result?;
+
+    Ok(())
 }

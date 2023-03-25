@@ -14,7 +14,7 @@ pub fn handler<S: Store, P: Prompter>(
     arguments: Arguments,
     prompt: P,
     interactive: &Interactive,
-) -> anyhow::Result<()> {
+) -> Result<(), Errors> {
     local_config_warning(config_key);
 
     match arguments {

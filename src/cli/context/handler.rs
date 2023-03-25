@@ -13,9 +13,8 @@ pub fn handler<G: Git, S: Store, P: Prompter>(
     context: &AppContext<G, S>,
     args: Arguments,
     prompt: P,
-) -> anyhow::Result<()> {
+) -> Result<(), Errors> {
     let repo_name = context.git.repository_name().map_err(|e| Errors::Git(e))?;
-
     let branch_name = context.git.branch_name().map_err(|e| Errors::Git(e))?;
 
     let branch = context.store.get_branch(&branch_name, &repo_name).ok();
