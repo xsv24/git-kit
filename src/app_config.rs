@@ -7,8 +7,8 @@ use rusqlite::Connection;
 use crate::{
     adapters::{sqlite::Sqlite, Git},
     domain::{
-        adapters::{Git as _, Store},
-        errors::{Errors, GitError},
+        adapters::{Git as _, GitSystem, Store},
+        errors::Errors,
         models::{Config, ConfigKey, ConfigStatus},
     },
 };
@@ -18,15 +18,15 @@ pub struct AppConfig {
 }
 
 impl AppConfig {
-    pub fn new(
+    pub fn new<S: GitSystem>(
         once_off_config_path: Option<String>,
-        git: &Git,
+        git: &Git<S>,
         store: &Sqlite,
     ) -> Result<AppConfig, Errors> {
         let config = match once_off_config_path {
             Some(path) => Config::new(ConfigKey::Once, path, ConfigStatus::Active).map_err(|e| {
                 Errors::Configuration {
-                    message: "Invalid configation given".into(),
+                    message: "Invalid configuration given".into(),
                     source: e.into(),
                 }
             }),
@@ -38,9 +38,8 @@ impl AppConfig {
                 }),
         }?;
 
-        let git_root_dir = git
-            .root_directory()
-            .map_err(|_| Errors::Git(GitError::Read))?;
+        let git_root_dir = git.root_directory().map_err(|e| Errors::Git(e))?;
+
         let config = Self::map_config_overrides(config, git_root_dir);
 
         Ok(AppConfig { config })
@@ -103,7 +102,7 @@ mod tests {
     use fake::{Fake, Faker};
 
     use crate::{
-        adapters::Git,
+        adapters::{Git, GitCommand},
         domain::{adapters, models::ConfigStatus},
     };
 
@@ -111,7 +110,7 @@ mod tests {
 
     #[test]
     fn once_off_config_has_priority_1() -> anyhow::Result<()> {
-        let git: &dyn adapters::Git = &Git;
+        let git: &dyn adapters::Git = &Git { git: GitCommand };
 
         let once_path = fake_path_buf();
         let valid_repo_dir = git.root_directory()?;
@@ -135,7 +134,7 @@ mod tests {
     #[test]
     fn repo_dir_with_config_file_overrides_any_user_or_default_config_has_priority_2(
     ) -> anyhow::Result<()> {
-        let git: &dyn adapters::Git = &Git;
+        let git: &dyn adapters::Git = &Git { git: GitCommand };
         let repo_root_with_config = git.root_directory()?;
         let config_repo = repo_root_with_config.join(".git-kit.yml");
         std::fs::File::create(&config_repo)?;

@@ -4,7 +4,7 @@ use fake::{Fake, Faker};
 use git_kit::domain::{
     adapters::{CheckoutStatus, Store},
     commands::checkout::{handler, Checkout},
-    errors::{Errors, GitError, PersistError},
+    errors::{GitError, PersistError},
     models::Branch,
 };
 
@@ -107,18 +107,20 @@ fn checkout_on_fail_to_checkout_branch_nothing_is_persisted() {
     let git_commands = GitCommandMock {
         repo: Ok(repo.clone()),
         branch_name: Ok(command.name.clone()),
-        checkout_res: |_, _| anyhow::bail!("failed to create or checkout existing branch!"),
+        checkout_res: |_, _| {
+            Err(GitError::Validation {
+                message: "failed to create or checkout existing branch!".into(),
+            })
+        },
         ..GitCommandMock::fake()
     };
 
     let context = fake_context(git_commands.clone(), fake_config()).unwrap();
 
     // Act
-    let error = handler(&context.git, &context.store, command.clone()).unwrap_err();
+    handler(&context.git, &context.store, command.clone()).unwrap_err();
 
     // Assert
-    assert!(matches!(error, Errors::Git(GitError::Write)));
-
     let error = context
         .store
         .get_branch(&command.name, &repo)

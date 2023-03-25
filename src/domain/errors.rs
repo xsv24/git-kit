@@ -38,11 +38,20 @@ pub enum UserInputError {
 
 #[derive(Error, Debug)]
 pub enum GitError {
-    #[error("Failed to read a git provided value")]
-    Read,
+    #[error("Failed retrieve the current git branch name")]
+    BranchName,
+    
+    #[error("Failed retrieve the current git root directory")]
+    RootDirectory,
 
-    #[error("Failed to write to git")]
-    Write,
+    #[error("Failed to checkout branch {name:?}")]
+    Checkout { name: String },
+
+    #[error("Failed to apply commit")]
+    Commit,
+
+    #[error("Validation error occurred: {message:?}")]
+    Validation { message: String },
 }
 
 #[derive(Error, Debug)]

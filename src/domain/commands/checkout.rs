@@ -1,6 +1,6 @@
 use crate::domain::{
     adapters::{CheckoutStatus, Git, Store},
-    errors::{Errors, GitError},
+    errors::Errors,
     models::Branch,
 };
 
@@ -25,14 +25,12 @@ pub fn handler<G: Git, S: Store>(git: &G, store: &S, args: Checkout) -> Result<B
         log::error!("failed to create new branch: {}", err);
 
         git.checkout(&args.name, CheckoutStatus::Existing)
-            .map_err(|_| Errors::Git(GitError::Write))?;
+            .map_err(|e| Errors::Git(e))?;
     }
 
     // We want to store the branch name against and ticket number
     // So whenever we commit we get the ticket number from the branch
-    let repo_name = git
-        .repository_name()
-        .map_err(|_| Errors::Git(GitError::Read))?;
+    let repo_name = git.repository_name().map_err(|e| Errors::Git(e))?;
 
     let branch = Branch::new(&args.name, &repo_name, args.ticket, args.link, args.scope);
     store

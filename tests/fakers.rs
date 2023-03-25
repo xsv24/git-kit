@@ -1,4 +1,3 @@
-use anyhow::anyhow;
 use chrono::Utc;
 use std::{
     env::temp_dir,
@@ -11,6 +10,7 @@ use git_kit::{
     app_context::AppContext,
     domain::{
         adapters::{CheckoutStatus, CommitMsgStatus, Git},
+        errors::GitError,
         models::{Branch, Config, ConfigStatus},
     },
     entry::Interactive,
@@ -64,9 +64,9 @@ pub fn fake_branch() -> Branch {
 pub struct GitCommandMock {
     pub repo: Result<String, String>,
     pub branch_name: Result<String, String>,
-    pub checkout_res: fn(&str, CheckoutStatus) -> anyhow::Result<()>,
-    pub commit_res: fn(&Path, CommitMsgStatus) -> anyhow::Result<()>,
-    pub template_file_path: fn() -> anyhow::Result<PathBuf>,
+    pub checkout_res: fn(&str, CheckoutStatus) -> Result<(), GitError>,
+    pub commit_res: fn(&Path, CommitMsgStatus) -> Result<(), GitError>,
+    pub template_file_path: fn() -> Result<PathBuf, GitError>,
 }
 
 impl GitCommandMock {
@@ -85,29 +85,33 @@ impl GitCommandMock {
 }
 
 impl Git for GitCommandMock {
-    fn repository_name(&self) -> anyhow::Result<String> {
+    fn repository_name(&self) -> Result<String, GitError> {
         self.repo
             .as_ref()
             .map(|s| s.to_owned())
-            .map_err(|e| anyhow!(e.to_owned()))
+            .map_err(|e| GitError::Validation {
+                message: e.into(),
+            })
     }
 
-    fn branch_name(&self) -> anyhow::Result<String> {
+    fn branch_name(&self) -> Result<String, GitError> {
         self.branch_name
             .as_ref()
             .map(|s| s.to_owned())
-            .map_err(|e| anyhow!(e.to_owned()))
+            .map_err(|e| GitError::Validation {
+                message: e.into(),
+            })
     }
 
-    fn checkout(&self, name: &str, status: CheckoutStatus) -> anyhow::Result<()> {
+    fn checkout(&self, name: &str, status: CheckoutStatus) -> Result<(), GitError> {
         (self.checkout_res)(name, status)
     }
 
-    fn root_directory(&self) -> anyhow::Result<PathBuf> {
+    fn root_directory(&self) -> Result<PathBuf, GitError> {
         panic!("Did not expect Git 'root_directory' to be called.");
     }
 
-    fn template_file_path(&self) -> anyhow::Result<PathBuf> {
+    fn template_file_path(&self) -> Result<PathBuf, GitError> {
         (self.template_file_path)()
     }
 
@@ -115,7 +119,7 @@ impl Git for GitCommandMock {
         &self,
         template: &Path,
         complete: CommitMsgStatus,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), GitError> {
         (self.commit_res)(template, complete)
     }
 }
