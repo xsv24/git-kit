@@ -1,19 +1,26 @@
 use crate::{
-    domain::adapters::{CommitMsgStatus, Git, Store},
+    domain::{adapters::{CommitMsgStatus, Git, Store}, errors::Errors},
     utils::string::OptionStr,
 };
 
 use super::Commit;
 
 pub fn handler<G: Git, S: Store>(git: &G, store: &S, commit: Commit) -> anyhow::Result<String> {
+    let branch_name = git.branch_name().map_err(|e| Errors::Git(e))?;
+    let repo_name = git.repository_name().map_err(|e| Errors::Git(e))?;
+
     let branch = store
-        .get_branch(&git.branch_name()?, &git.repository_name()?)
+        .get_branch(&branch_name, &repo_name)
         .ok();
 
-    let contents = commit.commit_message(commit.template.content.clone(), branch)?;
+    let contents = commit.commit_message(commit.template.content.clone(), branch)
+        .map_err(|e| Errors::Configuration { message: "Invalid template regex".into(), source: e.into() })?;
 
-    let template_file = git.template_file_path()?;
-    std::fs::write(&template_file, &contents)?;
+    let template_file = git.template_file_path()
+        .map_err(|e| Errors::Git(e))?;
+
+    std::fs::write(&template_file, &contents)
+        .map_err(|e| Errors::ValidationError { message: "Failed to write commit template file".into() })?;
 
     // Pre-cautionary measure encase 'message' is provided but still matches template exactly.
     // Otherwise git will just abort the commit if theres no difference / change from the template.
@@ -22,7 +29,8 @@ pub fn handler<G: Git, S: Store>(git: &G, store: &S, commit: Commit) -> anyhow::
         None => CommitMsgStatus::InComplete,
     };
 
-    git.commit_with_template(&template_file, commit_msg_complete)?;
+    git.commit_with_template(&template_file, commit_msg_complete)
+        .map_err(|e| Errors::Git(e))?;
 
     Ok(contents)
 }
