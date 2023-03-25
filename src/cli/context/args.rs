@@ -1,7 +1,10 @@
 use clap::Args;
 
 use crate::{
-    domain::{adapters::prompt::Prompter, commands::context::Context, models::Branch},
+    domain::{
+        adapters::prompt::Prompter, commands::context::Context, errors::UserInputError,
+        models::Branch,
+    },
     entry::Interactive,
     utils::or_else_try::OrElseTry,
 };
@@ -26,7 +29,7 @@ impl Arguments {
         &self,
         branch: Option<Branch>,
         prompt: P,
-    ) -> anyhow::Result<Context> {
+    ) -> Result<Context, UserInputError> {
         let ticket = self
             .ticket
             .clone()
@@ -54,7 +57,7 @@ impl Arguments {
         prompt: P,
         interactive: &Interactive,
         branch: Option<Branch>,
-    ) -> anyhow::Result<Context> {
+    ) -> Result<Context, UserInputError> {
         let domain = match interactive {
             Interactive::Enable => self.try_prompt_with_defaults(branch, prompt)?,
             Interactive::Disable => Context {

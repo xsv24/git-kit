@@ -6,6 +6,7 @@ use crate::{
             prompt::{Prompter, SelectItem},
             Store,
         },
+        errors::{Errors, UserInputError},
         models::{Config, ConfigKey, ConfigStatus},
     },
     entry::Interactive,
@@ -49,14 +50,17 @@ impl ConfigSet {
         store: &S,
         prompt: P,
         interactive: &Interactive,
-    ) -> anyhow::Result<ConfigKey> {
+    ) -> Result<ConfigKey, Errors> {
         Ok(match self.name {
             Some(name) => name.into(),
             None => prompt_configuration_select(
-                store.get_configurations()?,
+                store
+                    .get_configurations()
+                    .map_err(|e| Errors::PersistError(e))?,
                 prompt,
                 interactive.to_owned(),
-            )?,
+            )
+            .map_err(|e| Errors::UserInput(e))?,
         })
     }
 }
@@ -65,12 +69,11 @@ fn prompt_configuration_select<P: Prompter>(
     configurations: Vec<Config>,
     selector: P,
     interactive: Interactive,
-) -> anyhow::Result<ConfigKey> {
+) -> Result<ConfigKey, UserInputError> {
     if interactive == Interactive::Disable {
-        anyhow::bail!(clap::Error::raw(
-            clap::ErrorKind::MissingRequiredArgument,
-            "'name' is required"
-        ))
+        return Err(UserInputError::Validation {
+            name: "name".into(),
+        });
     }
 
     let configurations: Vec<SelectItem<ConfigKey>> = configurations
@@ -82,7 +85,7 @@ fn prompt_configuration_select<P: Prompter>(
         })
         .collect();
 
-    let selected = selector.select("Configuration:", configurations)?;
+    let selected = selector.select("Configuration", configurations)?;
 
     Ok(selected.value)
 }

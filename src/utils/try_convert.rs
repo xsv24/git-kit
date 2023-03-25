@@ -11,7 +11,6 @@ pub trait TryConvert<T> {
     fn try_convert(self) -> anyhow::Result<T>;
 }
 
-
 impl TryConvert<String> for PathBuf {
     fn try_convert(self) -> anyhow::Result<String> {
         let path = self

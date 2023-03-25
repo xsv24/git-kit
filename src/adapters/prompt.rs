@@ -88,9 +88,9 @@ fn into_domain_error(name: &str, error: InquireError) -> UserInputError {
         inquire::InquireError::NotTTY
         | inquire::InquireError::IO(_)
         | inquire::InquireError::Custom(_)
-        | inquire::InquireError::InvalidConfiguration(_) => {
-            UserInputError::Validation { name: name.into() }
-        }
+        | inquire::InquireError::InvalidConfiguration(_) => UserInputError::Validation {
+            name: name.to_lowercase().into(),
+        },
     }
 }
 

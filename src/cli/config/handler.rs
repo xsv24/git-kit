@@ -1,11 +1,11 @@
 use crate::domain::adapters::prompt::Prompter;
 use crate::domain::adapters::Store;
+use crate::domain::errors::{Errors, UserInputError};
 use crate::domain::models::{ConfigKey, ConfigStatus};
 use crate::entry::Interactive;
-use crate::utils::TryConvert;
 
+use super::args::{ConfigAdd, ConfigSet};
 use super::Arguments;
-use anyhow::Context;
 use colored::Colorize;
 
 pub fn handler<S: Store, P: Prompter>(
@@ -18,44 +18,79 @@ pub fn handler<S: Store, P: Prompter>(
     local_config_warning(config_key);
 
     match arguments {
-        Arguments::Add(args) => {
-            let config = args.try_into_domain()?;
-            if config.key == ConfigKey::Default {
-                anyhow::bail!("Cannot override 'default' config!");
-            }
+        Arguments::Add(args) => add(args, store),
+        Arguments::Set(args) => set(args, store, prompt, interactive),
+        Arguments::Reset => reset(store),
+        Arguments::Show => list(store),
+    }?;
 
-            let _ = (&config.path)
-                .try_convert()
-                .context("Failed to convert path to string")?;
+    Ok(())
+}
 
-            store.persist_config(&config)?;
-            println!("🟢 {} (Active)", config.key.to_string().green());
-        }
-        Arguments::Set(args) => {
-            let key = args.try_into_domain(store, prompt, interactive)?;
-            store.set_active_config(&key)?;
-            println!("🟢 {} (Active)", key.to_string().green());
-        }
-        Arguments::Reset => {
-            let key = ConfigKey::Default;
-            store.set_active_config(&key)?;
-            println!("🟢 Config reset to {}", key.to_string().green());
-        }
-        Arguments::Show => {
-            let mut configurations = store.get_configurations()?;
-            configurations.sort_by_key(|c| c.status.clone());
+fn add<S: Store>(args: ConfigAdd, store: &S) -> Result<(), Errors> {
+    let config = args
+        .try_into_domain()
+        .map_err(|_| UserInputError::Validation {
+            name: "config path".into(),
+        })
+        .map_err(|e| Errors::UserInput(e))?;
 
-            for config in configurations {
-                let key = config.key.to_string();
-                let path = config.path.display();
+    if config.key == ConfigKey::Default {
+        return Err(Errors::UserInput(UserInputError::Validation {
+            name: "config key".into(),
+        }));
+    }
 
-                match config.status {
-                    ConfigStatus::Active => println!("🟢 {} (Active) ➜ '{}'", key.green(), path),
-                    ConfigStatus::Disabled => println!("🔴 {key} ➜ '{path}'"),
-                }
-            }
+    store.persist_config(&config)?;
+    println!("🟢 {} (Active)", config.key.to_string().green());
+
+    Ok(())
+}
+
+fn set<S: Store, P: Prompter>(
+    args: ConfigSet,
+    store: &mut S,
+    prompt: P,
+    interactive: &Interactive,
+) -> Result<(), Errors> {
+    let key = args.try_into_domain(store, prompt, interactive)?;
+
+    store
+        .set_active_config(&key)
+        .map_err(|e| Errors::PersistError(e))?;
+
+    println!("🟢 {} (Active)", key.to_string().green());
+
+    Ok(())
+}
+
+fn reset<S: Store>(store: &mut S) -> Result<(), Errors> {
+    let key = ConfigKey::Default;
+    store
+        .set_active_config(&key)
+        .map_err(|e| Errors::PersistError(e))?;
+
+    println!("🟢 Config reset to {}", key.to_string().green());
+
+    Ok(())
+}
+
+fn list<S: Store>(store: &S) -> Result<(), Errors> {
+    let mut configurations = store
+        .get_configurations()
+        .map_err(|e| Errors::PersistError(e))?;
+
+    configurations.sort_by_key(|c| c.status.clone());
+
+    for config in configurations {
+        let key = config.key.to_string();
+        let path = config.path.display();
+
+        match config.status {
+            ConfigStatus::Active => println!("🟢 {} (Active) ➜ '{}'", key.green(), path),
+            ConfigStatus::Disabled => println!("🔴 {key} ➜ '{path}'"),
         }
-    };
+    }
 
     Ok(())
 }
