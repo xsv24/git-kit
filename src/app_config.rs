@@ -102,7 +102,7 @@ mod tests {
     use fake::{Fake, Faker};
 
     use crate::{
-        adapters::{Git, GitCommand},
+        adapters::GitCommand,
         domain::{adapters, models::ConfigStatus},
     };
 

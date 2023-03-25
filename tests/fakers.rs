@@ -89,18 +89,14 @@ impl Git for GitCommandMock {
         self.repo
             .as_ref()
             .map(|s| s.to_owned())
-            .map_err(|e| GitError::Validation {
-                message: e.into(),
-            })
+            .map_err(|e| GitError::Validation { message: e.into() })
     }
 
     fn branch_name(&self) -> Result<String, GitError> {
         self.branch_name
             .as_ref()
             .map(|s| s.to_owned())
-            .map_err(|e| GitError::Validation {
-                message: e.into(),
-            })
+            .map_err(|e| GitError::Validation { message: e.into() })
     }
 
     fn checkout(&self, name: &str, status: CheckoutStatus) -> Result<(), GitError> {

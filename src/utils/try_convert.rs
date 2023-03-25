@@ -1,7 +1,6 @@
 use std::{
     fs,
     path::{Path, PathBuf},
-    process::Command,
 };
 
 use anyhow::Context;
@@ -12,14 +11,6 @@ pub trait TryConvert<T> {
     fn try_convert(self) -> anyhow::Result<T>;
 }
 
-impl TryConvert<String> for Command {
-    fn try_convert(mut self) -> anyhow::Result<String> {
-        let output = self.output()?;
-        let stdout = String::from_utf8_lossy(&output.stdout);
-
-        Ok(stdout.into())
-    }
-}
 
 impl TryConvert<String> for PathBuf {
     fn try_convert(self) -> anyhow::Result<String> {

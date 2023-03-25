@@ -40,7 +40,7 @@ pub enum UserInputError {
 pub enum GitError {
     #[error("Failed retrieve the current git branch name")]
     BranchName,
-    
+
     #[error("Failed retrieve the current git root directory")]
     RootDirectory,
 

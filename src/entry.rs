@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 
-use crate::adapters::{sqlite::Sqlite, Git};
+use crate::adapters::sqlite::Sqlite;
+use crate::adapters::{Git, GitCommand};
 use crate::app_config::AppConfig;
 use crate::app_context::AppContext;
 use crate::cli::{commands::Commands, log::LogLevel};
@@ -39,10 +40,10 @@ pub struct Cli {
 }
 
 impl Cli {
-    pub fn init(&self) -> anyhow::Result<AppContext<Git, Sqlite>> {
+    pub fn init(&self) -> anyhow::Result<AppContext<Git<GitCommand>, Sqlite>> {
         self.log.init_logger();
 
-        let git = Git;
+        let git = Git { git: GitCommand };
 
         let connection = AppConfig::db_connection()?;
         let store = Sqlite::new(connection);

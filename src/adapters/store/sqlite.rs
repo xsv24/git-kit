@@ -216,8 +216,9 @@ mod tests {
     use std::path::PathBuf;
     use std::{collections::HashMap, path::Path};
 
+    use crate::adapters::git::{Git, GitCommand};
     use crate::entry::Interactive;
-    use crate::{adapters::Git, app_context::AppContext, domain::adapters::Store};
+    use crate::{app_context::AppContext, domain::adapters::Store};
 
     use crate::migrations::{db_migrations, MigrationContext};
 
@@ -293,7 +294,7 @@ mod tests {
 
         let context = AppContext {
             store,
-            git: Git,
+            git: Git { git: GitCommand },
             config: fake_config(),
             interactive: Interactive::Enable,
         };
@@ -330,7 +331,7 @@ mod tests {
 
         let context = AppContext {
             store,
-            git: Git,
+            git: Git { git: GitCommand },
             config: fake_config(),
             interactive: Interactive::Enable,
         };
@@ -366,7 +367,7 @@ mod tests {
 
         let context = AppContext {
             store,
-            git: Git,
+            git: Git { git: GitCommand },
             config: fake_config(),
             interactive: Interactive::Enable,
         };
@@ -383,7 +384,7 @@ mod tests {
         // Arrange
         let context = AppContext {
             store: Sqlite::new(setup_db()?),
-            git: Git,
+            git: Git { git: GitCommand },
             config: fake_config(),
             interactive: Interactive::Enable,
         };
