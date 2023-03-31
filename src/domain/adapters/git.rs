@@ -1,6 +1,6 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use crate::domain::errors::GitError;
+use crate::domain::{errors::GitError, models::path::AbsolutePath};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum CheckoutStatus {
@@ -17,7 +17,7 @@ pub enum CommitMsgStatus {
 /// Used to abstract cli git commands for testing.
 pub trait Git {
     /// Get the root directory of the current git repo.
-    fn root_directory(&self) -> Result<PathBuf, GitError>;
+    fn root_directory(&self) -> Result<AbsolutePath, GitError>;
 
     /// Get the current git repository name.
     fn repository_name(&self) -> Result<String, GitError>;
@@ -29,7 +29,7 @@ pub trait Git {
     fn checkout(&self, name: &str, status: CheckoutStatus) -> Result<(), GitError>;
 
     /// Get the commit file path for the current repository.
-    fn template_file_path(&self) -> Result<PathBuf, GitError>;
+    fn template_file_path(&self) -> Result<AbsolutePath, GitError>;
 
     /// Commit changes and open and editor with template file.
     fn commit_with_template(

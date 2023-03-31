@@ -1,11 +1,9 @@
 use std::path::{Path, PathBuf};
 
-use crate::{
-    domain::{
-        adapters::{self, CheckoutStatus, CommitMsgStatus, GitResult, GitSystem},
-        errors::GitError,
-    },
-    utils::TryConvert,
+use crate::domain::{
+    adapters::{self, CheckoutStatus, CommitMsgStatus, GitResult, GitSystem},
+    errors::GitError,
+    models::path::{AbsolutePath, PathType},
 };
 
 pub struct Git<S: GitSystem> {
@@ -13,7 +11,7 @@ pub struct Git<S: GitSystem> {
 }
 
 impl<S: GitSystem> adapters::Git for Git<S> {
-    fn root_directory(&self) -> Result<PathBuf, GitError> {
+    fn root_directory(&self) -> Result<AbsolutePath, GitError> {
         let dir: String = self
             .git
             .command(&["rev-parse", "--show-toplevel"])
@@ -24,18 +22,16 @@ impl<S: GitSystem> adapters::Git for Git<S> {
             })?;
 
         log::info!("git root directory {}", dir);
-        let path = Path::new(dir.trim()).to_owned();
+        let path = AbsolutePath::try_from(dir, PathType::Directory).map_err(|e| {
+            log::error!("Expected git root directory: {}", e);
+            GitError::RootDirectory
+        })?;
 
-        if path.is_dir() {
-            Ok(path)
-        } else {
-            log::error!("git root directory is not a directory");
-            Err(GitError::RootDirectory)
-        }
+        Ok(path)
     }
 
     fn repository_name(&self) -> Result<String, GitError> {
-        let repo_dir = self.root_directory()?.try_convert().map_err(|e| {
+        let repo_dir: String = self.root_directory()?.try_into().map_err(|e| {
             log::error!("Failed to get repository name: {}", e);
             GitError::RootDirectory
         })?;
@@ -81,13 +77,21 @@ impl<S: GitSystem> adapters::Git for Git<S> {
         Ok(())
     }
 
-    fn template_file_path(&self) -> Result<PathBuf, GitError> {
+    fn template_file_path(&self) -> Result<AbsolutePath, GitError> {
         // Template file and stored in the .git directory to avoid users having to adding to their .gitignore
         // In future maybe we could make our own .git-kit dir to house config / templates along with this.
-        let path = self
-            .root_directory()?
+        let path: PathBuf = self.root_directory()?.into();
+
+        let path: AbsolutePath = path
             .join(".git")
-            .join("GIT_KIT_COMMIT_TEMPLATE");
+            .join("GIT_KIT_COMMIT_TEMPLATE")
+            .try_into()
+            .map_err(|e| {
+                log::error!("{}", e);
+                GitError::Validation {
+                    message: "Failed to build template file path".into(),
+                }
+            })?;
 
         Ok(path)
     }
@@ -154,7 +158,7 @@ mod tests {
         };
 
         let result = git.root_directory().unwrap();
-        assert_eq!(result, valid_dir_path());
+        assert_eq!(result, valid_dir_path().try_into().unwrap());
     }
 
     #[test]
