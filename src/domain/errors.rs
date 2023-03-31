@@ -32,8 +32,8 @@ pub enum UserInputError {
     #[error("Input prompt cancelled by user")]
     Cancelled,
 
-    #[error("Invalid user input {name:?} found")]
-    Validation { name: String },
+    #[error("Invalid input {name:?} found, {}", .message.to_lowercase())]
+    Validation { name: String, message: String },
 }
 
 #[derive(Error, Debug)]
