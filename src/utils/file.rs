@@ -1,18 +1,18 @@
 use std::{fs::File, io::Read, path::PathBuf};
 
-use super::TryConvert;
+use crate::domain::models::path::AbsolutePath;
 
-pub fn get_file_contents(path: &PathBuf) -> anyhow::Result<String> {
-    let file_name = path.try_convert().unwrap_or_default();
-    let mut buff = String::new();
+pub fn get_file_contents(path: &AbsolutePath) -> anyhow::Result<String> {
+    let path_buf: PathBuf = path.to_owned().into();
 
-    let mut reader = File::open(path).map_err(|e| {
-        log::error!("Failed to open file at '{file_name}': {}", e);
+    let mut reader = File::open(path_buf).map_err(|e| {
+        log::error!("Failed to open file at '{}': {}", path.to_string(), e);
         e
     })?;
 
+    let mut buff = String::new();
     reader.read_to_string(&mut buff).map_err(|e| {
-        log::error!("Failed to read file at '{file_name}': {}", e);
+        log::error!("Failed to read file at '{}': {}", path.to_string(), e);
         e
     })?;
 
