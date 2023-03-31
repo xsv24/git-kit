@@ -63,7 +63,6 @@ impl Arguments {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use anyhow::Context;
     use fake::{Fake, Faker};
 
     use crate::domain::adapters::prompt::SelectItem;
@@ -163,7 +162,7 @@ mod tests {
                 Ok(option) => Ok(option.clone()),
                 Err(_) => Err(UserInputError::Validation {
                     name: name.into(),
-                    message: "error".into(),
+                    message: "An error occurred in the mock prompter".into(),
                 }),
             }
         }
@@ -175,16 +174,15 @@ mod tests {
         ) -> Result<SelectItem<T>, UserInputError> {
             let name: String = name.into();
             match &self.select_index {
-                Ok(index) => options
-                    .into_iter()
-                    .nth(index.clone())
-                    .ok_or_else(|| UserInputError::Validation {
+                Ok(index) => options.into_iter().nth(index.clone()).ok_or_else(|| {
+                    UserInputError::Validation {
                         name: name.clone(),
-                        message: format!("Failed select item for '{name}'"),
-                    }),
+                        message: "An error occurred in the mock prompter".into(),
+                    }
+                }),
                 Err(_) => Err(UserInputError::Validation {
                     name: name.clone(),
-                    message: format!("Failed select item for '{name}'"),
+                    message: "An error occurred in the mock prompter".into(),
                 }),
             }
         }

@@ -147,7 +147,8 @@ mod tests {
     #[test]
     fn repo_dir_with_config_file_overrides_any_user_or_default_config_has_priority_2() {
         // Arrange
-        let repo_root_with_config = repo_directory();
+        // Mock repo 'local' level configuration
+        let repo_root_with_config = std::env::temp_dir();
         let config_repo = repo_root_with_config.join(".git-kit.yml");
         let path_buf: PathBuf = config_repo.clone().into();
         std::fs::File::create(&path_buf).unwrap();
@@ -160,7 +161,7 @@ mod tests {
                     path: valid_file_path(),
                     status: ConfigStatus::Active,
                 },
-                abs_repo_directory(),
+                repo_root_with_config.clone().try_into().unwrap(),
             )
             .unwrap();
 

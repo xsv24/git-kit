@@ -176,7 +176,7 @@ mod tests {
                 Ok(option) => Ok(option.clone()),
                 Err(_) => Err(UserInputError::Validation {
                     name: name.into(),
-                    message: "error".into(),
+                    message: "An error occurred within the mock prompter".into(),
                 }),
             }
         }
@@ -193,11 +193,11 @@ mod tests {
                     .context("Failed to get item")
                     .map_err(|_| UserInputError::Validation {
                         name: name.into(),
-                        message: "error".into(),
+                        message: "An error occurred within the mock prompter".into(),
                     }),
                 Err(_) => Err(UserInputError::Validation {
                     name: name.into(),
-                    message: "error".into(),
+                    message: "An error occurred within the mock prompter".into(),
                 }),
             }
         }

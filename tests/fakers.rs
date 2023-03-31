@@ -26,15 +26,14 @@ pub fn fake_config() -> Config {
     }
 }
 
-pub fn valid_dir_path() -> AbsolutePath {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .try_into()
-        .unwrap()
-}
-
 pub fn valid_template_file_path() -> AbsolutePath {
-    let path = valid_dir_path();
-    path.join("templates/default.yml", PathType::File).unwrap()
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let default_config = root.join("templates/default.yml");
+
+    let path = std::env::temp_dir().join("default.yml");
+    std::fs::copy(&default_config, &path).unwrap();
+    
+    path.try_into().unwrap()
 }
 
 pub fn fake_context<'a, C: Git>(git: C, config: Config) -> anyhow::Result<AppContext<C, Sqlite>> {
