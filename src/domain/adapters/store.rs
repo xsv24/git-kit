@@ -1,5 +1,5 @@
 use crate::domain::{
-    errors::{Errors, PersistError},
+    errors::PersistError,
     models::{Branch, Config, ConfigKey},
 };
 
@@ -8,7 +8,7 @@ pub trait Store {
 
     fn get_branch(&self, branch: &str, repo: &str) -> Result<Branch, PersistError>;
 
-    fn persist_config(&self, config: &Config) -> Result<(), Errors>;
+    fn persist_config(&self, config: &Config) -> Result<(), PersistError>;
 
     fn set_active_config(&mut self, key: &ConfigKey) -> Result<Config, PersistError>;
 

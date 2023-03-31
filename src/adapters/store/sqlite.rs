@@ -1,13 +1,10 @@
 use anyhow::anyhow;
 use rusqlite::{Connection, Transaction};
 
-use crate::{
-    domain::{
-        self,
-        errors::{Errors, PersistError},
-        models::{Branch, Config, ConfigKey, ConfigStatus},
-    },
-    utils::TryConvert,
+use crate::domain::{
+    self,
+    errors::PersistError,
+    models::{Branch, Config, ConfigKey, ConfigStatus},
 };
 
 pub struct Sqlite {
@@ -77,30 +74,18 @@ impl domain::adapters::Store for Sqlite {
         Ok(branch)
     }
 
-    fn persist_config(&self, config: &Config) -> Result<(), Errors> {
-        // TODO: Move this to the domain
-        if config.key == ConfigKey::Default {
-            return Err(Errors::ValidationError {
-                message: "Cannot override 'default' config!".into(),
-            });
-        }
-
+    fn persist_config(&self, config: &Config) -> Result<(), PersistError> {
         let key: String = config.key.clone().into();
-        let path = (&config.path)
-            .try_convert()
-            .map_err(|_| Errors::ValidationError {
-                message: "Failed to convert path to string".into(),
-            })?;
+        let path: String = config.path.to_string();
 
         log::info!("insert or update user config '{}' path '{}'", &key, &path);
 
         self.connection
             .execute(
                 "REPLACE INTO config (key, path, status) VALUES (?1, ?2, ?3)",
-                (key, path, String::from(ConfigStatus::Active)),
+                (key, path, String::from(ConfigStatus::Disabled)),
             )
-            .map_err(|e| PersistError::into_config_error("Failed to update config.", e))
-            .map_err(|e| Errors::PersistError(e))?;
+            .map_err(|e| PersistError::into_config_error("Failed to update config.", e))?;
 
         Ok(())
     }
@@ -213,10 +198,10 @@ impl domain::adapters::Store for Sqlite {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
     use std::{collections::HashMap, path::Path};
 
     use crate::adapters::git::{Git, GitCommand};
+    use crate::domain::models::path::AbsolutePath;
     use crate::entry::Interactive;
     use crate::{app_context::AppContext, domain::adapters::Store};
 
@@ -409,7 +394,11 @@ mod tests {
     #[test]
     fn persist_config_creates_a_new_item_if_not_exists() -> anyhow::Result<()> {
         // Arrange
-        let config = fake_config();
+        let config = Config {
+            status: ConfigStatus::Disabled,
+            ..fake_config()
+        };
+
         let connection = setup_db()?;
         let store = Sqlite::new(connection);
 
@@ -677,13 +666,16 @@ mod tests {
         Ok(())
     }
 
-    fn valid_path() -> PathBuf {
+    fn valid_path() -> AbsolutePath {
         let path = Path::new(".").to_owned();
-        std::fs::canonicalize(path).expect("Valid conversion to absolute path")
+        std::fs::canonicalize(path)
+            .expect("Valid conversion to absolute path")
+            .try_into()
+            .unwrap()
     }
 
     fn valid_path_str() -> String {
-        valid_path().to_str().unwrap().to_owned()
+        valid_path().to_string()
     }
 
     fn fake_config() -> Config {
@@ -715,7 +707,7 @@ mod tests {
         insert_raw_config(
             connection,
             &key,
-            &(&config.path).try_convert()?,
+            &config.path.to_string(),
             &String::from(config.status.clone()),
         );
 
