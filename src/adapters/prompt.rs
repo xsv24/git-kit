@@ -90,6 +90,7 @@ fn into_domain_error(name: &str, error: InquireError) -> UserInputError {
         | inquire::InquireError::Custom(_)
         | inquire::InquireError::InvalidConfiguration(_) => UserInputError::Validation {
             name: name.to_lowercase().into(),
+            message: "Failed to complete interactive prompt".into(),
         },
     }
 }

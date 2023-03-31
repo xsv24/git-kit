@@ -2,7 +2,10 @@ use clap::Subcommand;
 
 use crate::{
     app_context::AppContext,
-    domain::{adapters::{prompt::Prompter, Git, Store}, errors::Errors},
+    domain::{
+        adapters::{prompt::Prompter, Git, Store},
+        errors::Errors,
+    },
 };
 
 use super::{checkout, commit, config, context, templates};

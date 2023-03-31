@@ -161,7 +161,10 @@ mod tests {
         fn text(&self, name: &str, _: Option<String>) -> Result<Option<String>, UserInputError> {
             match &self.text_result {
                 Ok(option) => Ok(option.clone()),
-                Err(_) => Err(UserInputError::Validation { name: name.into() }),
+                Err(_) => Err(UserInputError::Validation {
+                    name: name.into(),
+                    message: "error".into(),
+                }),
             }
         }
 
@@ -172,12 +175,17 @@ mod tests {
         ) -> Result<SelectItem<T>, UserInputError> {
             let name: String = name.into();
             match &self.select_index {
-                Ok(index) => Ok(options
+                Ok(index) => options
                     .into_iter()
                     .nth(index.clone())
-                    .context("Failed to get item")
-                    .map_err(|_| UserInputError::Validation { name })?),
-                Err(_) => Err(UserInputError::Validation { name }),
+                    .ok_or_else(|| UserInputError::Validation {
+                        name: name.clone(),
+                        message: format!("Failed select item for '{name}'"),
+                    }),
+                Err(_) => Err(UserInputError::Validation {
+                    name: name.clone(),
+                    message: format!("Failed select item for '{name}'"),
+                }),
             }
         }
     }

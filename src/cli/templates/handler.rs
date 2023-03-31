@@ -1,6 +1,9 @@
 use colored::Colorize;
 
-use crate::{domain::{models::Config, errors::Errors}, template_config::TemplateConfig};
+use crate::{
+    domain::{errors::Errors, models::Config},
+    template_config::TemplateConfig,
+};
 
 pub fn handler(config: &Config) -> Result<(), Errors> {
     log::info!("collect commit templates from config.");
