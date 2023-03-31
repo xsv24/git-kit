@@ -3,7 +3,7 @@ use rusqlite::{types::Type, Row};
 
 use crate::domain::{
     errors::PersistError,
-    models::{Branch, Config, ConfigKey},
+    models::{path::AbsolutePath, Branch, Config, ConfigKey},
 };
 
 impl PersistError {
@@ -73,17 +73,16 @@ impl<'a> TryFrom<&Row<'a>> for Config {
             )
         })?;
 
-        let config = Config::new(
-            ConfigKey::from(value.get::<_, String>(0)?),
-            value.get::<_, String>(1)?,
-            status,
-        )
-        .map_err(|e| {
+        let path: AbsolutePath = value.get::<_, String>(1)?.try_into().map_err(|e| {
             log::error!("Corrupted data failed to convert 'Config', {}", e);
             rusqlite::Error::InvalidColumnType(1, "Failed to convert path".into(), Type::Text)
         })?;
 
-        Ok(config)
+        Ok(Config {
+            key: ConfigKey::from(value.get::<_, String>(0)?.as_str()),
+            status,
+            path,
+        })
     }
 }
 

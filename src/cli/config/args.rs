@@ -7,7 +7,7 @@ use crate::{
             Store,
         },
         errors::{Errors, UserInputError},
-        models::{Config, ConfigKey, ConfigStatus},
+        models::{Config, ConfigKey},
     },
     entry::Interactive,
 };
@@ -32,12 +32,6 @@ pub struct ConfigAdd {
     pub path: String,
 }
 
-impl ConfigAdd {
-    pub fn try_into_domain(self) -> anyhow::Result<Config> {
-        Config::new(self.name.into(), self.path, ConfigStatus::Active)
-    }
-}
-
 #[derive(Debug, Args, PartialEq, Eq, Clone)]
 pub struct ConfigSet {
     /// Name used to reference the config file.
@@ -52,7 +46,7 @@ impl ConfigSet {
         interactive: &Interactive,
     ) -> Result<ConfigKey, Errors> {
         Ok(match self.name {
-            Some(name) => name.into(),
+            Some(name) => name.as_str().into(),
             None => prompt_configuration_select(
                 store
                     .get_configurations()
@@ -71,7 +65,7 @@ fn prompt_configuration_select<P: Prompter>(
     interactive: Interactive,
 ) -> Result<ConfigKey, UserInputError> {
     if interactive == Interactive::Disable {
-        return Err(UserInputError::Validation {
+        return Err(UserInputError::Required {
             name: "name".into(),
         });
     }
@@ -100,6 +94,10 @@ mod tests {
     use crate::domain::{
         adapters::prompt::{Prompter, SelectItem},
         errors::UserInputError,
+        models::{
+            path::{AbsolutePath, PathType},
+            ConfigStatus,
+        },
     };
 
     #[test]
@@ -133,24 +131,38 @@ mod tests {
             .unwrap_err();
 
         // Assert
-        assert_eq!(error.to_string(), "error: 'name' is required");
+        assert_eq!(error.to_string(), "Missing required \"name\" input");
     }
 
-    pub fn fake_config() -> Config {
+    fn valid_dir_path() -> AbsolutePath {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .try_into()
+            .unwrap()
+    }
+
+    fn valid_file_path() -> AbsolutePath {
+        let path = valid_dir_path();
+        path.join("templates/default.yml", PathType::File).unwrap()
+    }
+
+    fn fake_config() -> Config {
         Config {
             key: ConfigKey::User(Faker.fake()),
-            path: PathBuf::new(),
+            path: valid_file_path(),
             status: ConfigStatus::Active,
         }
     }
 
-    pub struct PromptTest {
+    struct PromptTest {
         select_item_name: anyhow::Result<String>,
     }
 
     impl Prompter for PromptTest {
         fn text(&self, name: &str, _: Option<String>) -> Result<Option<String>, UserInputError> {
-            Err(UserInputError::Validation { name: name.into() })
+            Err(UserInputError::Validation {
+                name: name.into(),
+                message: "error occurred in mock".into(),
+            })
         }
 
         fn select<T>(
@@ -163,8 +175,14 @@ mod tests {
                     .into_iter()
                     .find(|i| i.name == name.clone())
                     .context("Failed to get item")
-                    .map_err(|_| UserInputError::Validation { name: name.into() })?),
-                Err(_) => Err(UserInputError::Validation { name: name.into() }),
+                    .map_err(|_| UserInputError::Validation {
+                        name: name.into(),
+                        message: "Failed to get item".into(),
+                    })?),
+                Err(_) => Err(UserInputError::Validation {
+                    name: name.into(),
+                    message: "error occured in mock".into(),
+                }),
             }
         }
     }

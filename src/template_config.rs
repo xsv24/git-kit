@@ -1,9 +1,12 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    domain::errors::{Errors, UserInputError},
+    domain::{
+        errors::{Errors, UserInputError},
+        models::path::AbsolutePath,
+    },
     utils::get_file_contents,
 };
 
@@ -24,12 +27,12 @@ pub struct Template {
 }
 
 impl TemplateConfig {
-    pub fn new(config_path: &PathBuf) -> Result<Self, Errors> {
+    pub fn new(config_path: &AbsolutePath) -> Result<Self, Errors> {
         let config_contents =
             get_file_contents(config_path).map_err(|e| Errors::Configuration {
                 message: format!(
                     "Failed to read configuration at path '{}'",
-                    config_path.display()
+                    config_path.to_string()
                 ),
                 source: e.into(),
             })?;
@@ -38,7 +41,7 @@ impl TemplateConfig {
             Errors::Configuration {
                 message: format!(
                     "Failed to parse configuration from please ensure yaml is valid.\n{}",
-                    config_path.display()
+                    config_path.to_string()
                 ),
                 source: e.into(),
             }

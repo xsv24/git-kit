@@ -1,7 +1,8 @@
 use crate::domain::adapters::prompt::Prompter;
 use crate::domain::adapters::Store;
 use crate::domain::errors::{Errors, UserInputError};
-use crate::domain::models::{ConfigKey, ConfigStatus};
+use crate::domain::models::path::{AbsolutePath, PathType};
+use crate::domain::models::{Config, ConfigKey, ConfigStatus};
 use crate::entry::Interactive;
 
 use super::args::{ConfigAdd, ConfigSet};
@@ -27,21 +28,40 @@ pub fn handler<S: Store, P: Prompter>(
     Ok(())
 }
 
-fn add<S: Store>(args: ConfigAdd, store: &S) -> Result<(), Errors> {
-    let config = args
-        .try_into_domain()
-        .map_err(|_| UserInputError::Validation {
-            name: "config path".into(),
-        })
-        .map_err(|e| Errors::UserInput(e))?;
+fn add<S: Store>(args: ConfigAdd, store: &mut S) -> Result<(), Errors> {
+    let key = ConfigKey::from(args.name.as_str());
 
-    if config.key == ConfigKey::Default {
+    if !key.is_overridable() {
         return Err(Errors::UserInput(UserInputError::Validation {
-            name: "config key".into(),
+            name: "name".into(),
+            message: format!(
+                "Configuration '{}' cannot be overridden please choose another name",
+                args.name
+            ),
         }));
     }
 
-    store.persist_config(&config)?;
+    let path = AbsolutePath::try_from(args.path, PathType::File)
+        .map_err(|e| UserInputError::Validation {
+            name: "path".into(),
+            message: e.to_string(),
+        })
+        .map_err(|e| Errors::UserInput(e))?;
+
+    let config = Config {
+        key,
+        path,
+        status: ConfigStatus::Active,
+    };
+
+    store
+        .persist_config(&config)
+        .map_err(|e| Errors::PersistError(e))?;
+
+    store
+        .set_active_config(&config.key)
+        .map_err(|e| Errors::PersistError(e))?;
+
     println!("🟢 {} (Active)", config.key.to_string().green());
 
     Ok(())
@@ -84,7 +104,11 @@ fn list<S: Store>(store: &S) -> Result<(), Errors> {
 
     for config in configurations {
         let key = config.key.to_string();
-        let path = config.path.display();
+        let path: String = config
+            .path
+            .try_into()
+            .ok()
+            .unwrap_or_else(|| format!("Invalid configuration path please update"));
 
         match config.status {
             ConfigStatus::Active => println!("🟢 {} (Active) ➜ '{}'", key.green(), path),
@@ -99,7 +123,7 @@ fn local_config_warning(config_key: &ConfigKey) {
     let warn_message = match config_key {
         ConfigKey::Once => Some("'once off' --config"),
         ConfigKey::Local => Some("'local' repository"),
-        ConfigKey::User(_) | ConfigKey::Default => None,
+        ConfigKey::User(_) | ConfigKey::Default | ConfigKey::Conventional => None,
     };
 
     if let Some(msg) = warn_message {
