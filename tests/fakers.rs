@@ -32,7 +32,7 @@ pub fn valid_template_file_path() -> AbsolutePath {
 
     let path = std::env::temp_dir().join("default.yml");
     std::fs::copy(&default_config, &path).unwrap();
-    
+
     path.try_into().unwrap()
 }
 
