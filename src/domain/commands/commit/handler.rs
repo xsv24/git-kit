@@ -1,26 +1,35 @@
+use std::path::PathBuf;
+
 use crate::{
-    domain::{adapters::{CommitMsgStatus, Git, Store}, errors::Errors},
+    domain::{
+        adapters::{CommitMsgStatus, Git, Store},
+        errors::Errors,
+    },
     utils::string::OptionStr,
 };
 
 use super::Commit;
 
-pub fn handler<G: Git, S: Store>(git: &G, store: &S, commit: Commit) -> anyhow::Result<String> {
+pub fn handler<G: Git, S: Store>(git: &G, store: &S, commit: Commit) -> Result<String, Errors> {
     let branch_name = git.branch_name().map_err(|e| Errors::Git(e))?;
     let repo_name = git.repository_name().map_err(|e| Errors::Git(e))?;
 
-    let branch = store
-        .get_branch(&branch_name, &repo_name)
-        .ok();
+    let branch = store.get_branch(&branch_name, &repo_name).ok();
 
-    let contents = commit.commit_message(commit.template.content.clone(), branch)
-        .map_err(|e| Errors::Configuration { message: "Invalid template regex".into(), source: e.into() })?;
+    let contents = commit
+        .commit_message(commit.template.content.clone(), branch)
+        .map_err(|e| Errors::Configuration {
+            message: "Invalid template regex".into(),
+            source: e.into(),
+        })?;
 
-    let template_file = git.template_file_path()
-        .map_err(|e| Errors::Git(e))?;
+    let template_file = git.template_file_path().map_err(|e| Errors::Git(e))?;
 
-    std::fs::write(&template_file, &contents)
-        .map_err(|e| Errors::ValidationError { message: "Failed to write commit template file".into() })?;
+    let template_file: PathBuf = template_file.into();
+
+    std::fs::write(&template_file, &contents).map_err(|_| Errors::ValidationError {
+        message: "Failed to write commit template file".into(),
+    })?;
 
     // Pre-cautionary measure encase 'message' is provided but still matches template exactly.
     // Otherwise git will just abort the commit if theres no difference / change from the template.
