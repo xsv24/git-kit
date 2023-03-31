@@ -1,8 +1,5 @@
 use chrono::Utc;
-use std::{
-    env::temp_dir,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 use fake::{Fake, Faker};
 use git_kit::{
@@ -11,20 +8,33 @@ use git_kit::{
     domain::{
         adapters::{CheckoutStatus, CommitMsgStatus, Git},
         errors::GitError,
-        models::{Branch, Config, ConfigStatus},
+        models::{
+            path::{AbsolutePath, PathType},
+            Branch, Config, ConfigStatus,
+        },
     },
     entry::Interactive,
     migrations::{db_migrations, MigrationContext},
 };
 use rusqlite::Connection;
-use uuid::Uuid;
 
 pub fn fake_config() -> Config {
     Config {
-        key: Faker.fake::<String>().into(),
-        path: Faker.fake(),
+        key: Faker.fake::<String>().as_str().into(),
+        path: valid_template_file_path(),
         status: ConfigStatus::Active,
     }
+}
+
+pub fn valid_dir_path() -> AbsolutePath {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .try_into()
+        .unwrap()
+}
+
+pub fn valid_template_file_path() -> AbsolutePath {
+    let path = valid_dir_path();
+    path.join("templates/default.yml", PathType::File).unwrap()
 }
 
 pub fn fake_context<'a, C: Git>(git: C, config: Config) -> anyhow::Result<AppContext<C, Sqlite>> {
@@ -66,7 +76,7 @@ pub struct GitCommandMock {
     pub branch_name: Result<String, String>,
     pub checkout_res: fn(&str, CheckoutStatus) -> Result<(), GitError>,
     pub commit_res: fn(&Path, CommitMsgStatus) -> Result<(), GitError>,
-    pub template_file_path: fn() -> Result<PathBuf, GitError>,
+    pub template_file_path: fn() -> Result<AbsolutePath, GitError>,
 }
 
 impl GitCommandMock {
@@ -76,10 +86,7 @@ impl GitCommandMock {
             branch_name: Ok(Faker.fake()),
             checkout_res: |_, _| Ok(()),
             commit_res: |_, _| Ok(()),
-            template_file_path: || {
-                let temp_file = temp_dir().join(Uuid::new_v4().to_string());
-                Ok(temp_file)
-            },
+            template_file_path: || Ok(valid_template_file_path()),
         }
     }
 }
@@ -103,11 +110,11 @@ impl Git for GitCommandMock {
         (self.checkout_res)(name, status)
     }
 
-    fn root_directory(&self) -> Result<PathBuf, GitError> {
+    fn root_directory(&self) -> Result<AbsolutePath, GitError> {
         panic!("Did not expect Git 'root_directory' to be called.");
     }
 
-    fn template_file_path(&self) -> Result<PathBuf, GitError> {
+    fn template_file_path(&self) -> Result<AbsolutePath, GitError> {
         (self.template_file_path)()
     }
 
