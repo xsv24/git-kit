@@ -176,7 +176,6 @@ impl domain::adapters::Store for Sqlite {
         let configs: Vec<_> = statement
             .query_map([], |row| Config::try_from(row))
             .map_err(|e| PersistError::into_config_error("Failed to retrieve configs", e))?
-            .into_iter()
             .collect::<Result<_, _>>()
             .map_err(|e| PersistError::into_config_error("Failed to retrieve configs", e))?;
 

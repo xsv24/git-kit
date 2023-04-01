@@ -8,10 +8,7 @@ use git_kit::{
     domain::{
         adapters::{CheckoutStatus, CommitMsgStatus, Git},
         errors::GitError,
-        models::{
-            path::{AbsolutePath, PathType},
-            Branch, Config, ConfigStatus,
-        },
+        models::{path::AbsolutePath, Branch, Config, ConfigStatus},
     },
     entry::Interactive,
     migrations::{db_migrations, MigrationContext},
