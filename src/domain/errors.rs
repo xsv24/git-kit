@@ -8,7 +8,7 @@ pub enum Errors {
     #[error(transparent)]
     UserInput(UserInputError),
 
-    #[error("Invalid Configuration: {message}")]
+    #[error("Invalid configuration {}", .message.to_lowercase())]
     Configuration {
         message: String,
         source: anyhow::Error,
@@ -17,7 +17,7 @@ pub enum Errors {
     #[error(transparent)]
     PersistError(PersistError),
 
-    #[error("Validation error")]
+    #[error("Validation error occurred {}", .message.to_lowercase())]
     ValidationError { message: String },
 }
 
@@ -32,7 +32,7 @@ pub enum UserInputError {
     #[error("Input prompt cancelled by user")]
     Cancelled,
 
-    #[error("Invalid input {name:?} found, {}", .message.to_lowercase())]
+    #[error("Invalid input {name:?} found {}", .message.to_lowercase())]
     Validation { name: String, message: String },
 }
 
@@ -50,7 +50,7 @@ pub enum GitError {
     #[error("Failed to apply commit")]
     Commit,
 
-    #[error("Validation error occurred: {message:?}")]
+    #[error("Validation error occurred {message}")]
     Validation { message: String },
 }
 
@@ -65,7 +65,7 @@ pub enum PersistError {
         source: Option<anyhow::Error>,
     },
 
-    #[error("Requested {name} not found in persisted store")]
+    #[error("Requested {name:?} not found in persisted store")]
     NotFound { name: String },
 
     #[error("Failed to persist or retrieve {name:?}")]

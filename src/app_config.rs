@@ -8,7 +8,7 @@ use crate::{
     adapters::{sqlite::Sqlite, Git},
     domain::{
         adapters::{Git as _, GitSystem, Store},
-        errors::Errors,
+        errors::{Errors, UserInputError},
         models::{
             path::{AbsolutePath, PathType},
             Config, ConfigKey, ConfigStatus,
@@ -31,10 +31,10 @@ impl AppConfig {
                 key: ConfigKey::Once,
                 status: ConfigStatus::Active,
                 path: TryInto::<AbsolutePath>::try_into(path).map_err(|e| {
-                    Errors::Configuration {
-                        message: "Invalid configuration path".into(),
-                        source: e.into(),
-                    }
+                    Errors::UserInput(UserInputError::Validation {
+                        name: "config".into(),
+                        message: e.to_string(),
+                    })
                 })?,
             }),
             None => store

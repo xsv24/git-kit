@@ -19,7 +19,7 @@ pub fn handler<G: Git, S: Store>(git: &G, store: &S, commit: Commit) -> Result<S
     let contents = commit
         .commit_message(commit.template.content.clone(), branch)
         .map_err(|e| Errors::Configuration {
-            message: "Invalid template regex".into(),
+            message: "Failed attempting to build commit message".into(),
             source: e.into(),
         })?;
 
@@ -28,7 +28,7 @@ pub fn handler<G: Git, S: Store>(git: &G, store: &S, commit: Commit) -> Result<S
     let template_file: PathBuf = template_file.into();
 
     std::fs::write(&template_file, &contents).map_err(|_| Errors::ValidationError {
-        message: "Failed to write commit template file".into(),
+        message: "Failed attempting to write commit template file".into(),
     })?;
 
     // Pre-cautionary measure encase 'message' is provided but still matches template exactly.

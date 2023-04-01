@@ -129,7 +129,7 @@ fn checkout_on_fail_to_checkout_branch_nothing_is_persisted() {
     assert!(matches!(error, PersistError::NotFound { ref name } if name == "branch"));
     assert_eq!(
         error.to_string(),
-        "Requested branch not found in persisted store"
+        "Requested \"branch\" not found in persisted store"
     );
     context.close().unwrap();
 }
