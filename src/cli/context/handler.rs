@@ -14,14 +14,14 @@ pub fn handler<G: Git, S: Store, P: Prompter>(
     args: Arguments,
     prompt: P,
 ) -> Result<(), Errors> {
-    let repo_name = context.git.repository_name().map_err(|e| Errors::Git(e))?;
-    let branch_name = context.git.branch_name().map_err(|e| Errors::Git(e))?;
+    let repo_name = context.git.repository_name().map_err(Errors::Git)?;
+    let branch_name = context.git.branch_name().map_err(Errors::Git)?;
 
     let branch = context.store.get_branch(&branch_name, &repo_name).ok();
 
     let args = args
         .try_into_domain(prompt, &context.interactive, branch)
-        .map_err(|e| Errors::UserInput(e))?;
+        .map_err(Errors::UserInput)?;
 
     context::handler(&context.git, &context.store, args)?;
 

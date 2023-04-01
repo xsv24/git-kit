@@ -65,9 +65,9 @@ impl AbsolutePath {
     }
 }
 
-impl Into<PathBuf> for AbsolutePath {
-    fn into(self) -> PathBuf {
-        self.path
+impl From<AbsolutePath> for PathBuf {
+    fn from(value: AbsolutePath) -> Self {
+        value.path
     }
 }
 
@@ -85,7 +85,7 @@ impl TryInto<String> for &AbsolutePath {
             .path
             // Returns Err if the slice is not UTF-8 with a description as to why the provided slice is not UTF-8.
             .to_str()
-            .ok_or_else(|| PathError::Invalid)?;
+            .ok_or(PathError::Invalid)?;
 
         Ok(path.into())
     }

@@ -145,7 +145,7 @@ impl domain::adapters::Store for Sqlite {
 
     // TODO: split this out into separate functions get_config_by_id & get_config_by_status
     fn get_configuration(&self, key: Option<String>) -> Result<Config, PersistError> {
-        let config = match key {
+        match key {
             Some(key) => self
                 .connection
                 .query_row("SELECT * FROM config WHERE key = ?1", [key], |row| {
@@ -164,9 +164,7 @@ impl domain::adapters::Store for Sqlite {
                 .map_err(|e| {
                     PersistError::into_config_error("Failed to retrieve 'active' config.", e)
                 }),
-        };
-
-        Ok(config?)
+        }
     }
 
     fn get_configurations(&self) -> Result<Vec<Config>, PersistError> {

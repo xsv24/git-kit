@@ -21,6 +21,7 @@ impl PersistError {
         PersistError::into("branch", message, error)
     }
 
+    #[allow(clippy::wildcard_in_or_patterns)]
     fn into<S>(name: &str, message: S, error: rusqlite::Error) -> PersistError
     where
         S: Into<String>,

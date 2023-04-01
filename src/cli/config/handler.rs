@@ -46,7 +46,7 @@ fn add<S: Store>(args: ConfigAdd, store: &mut S) -> Result<(), Errors> {
             name: "path".into(),
             message: e.to_string(),
         })
-        .map_err(|e| Errors::UserInput(e))?;
+        .map_err(Errors::UserInput)?;
 
     let config = Config {
         key,
@@ -56,11 +56,11 @@ fn add<S: Store>(args: ConfigAdd, store: &mut S) -> Result<(), Errors> {
 
     store
         .persist_config(&config)
-        .map_err(|e| Errors::PersistError(e))?;
+        .map_err(Errors::PersistError)?;
 
     store
         .set_active_config(&config.key)
-        .map_err(|e| Errors::PersistError(e))?;
+        .map_err(Errors::PersistError)?;
 
     println!("🟢 {} (Active)", config.key.to_string().green());
 
@@ -77,7 +77,7 @@ fn set<S: Store, P: Prompter>(
 
     store
         .set_active_config(&key)
-        .map_err(|e| Errors::PersistError(e))?;
+        .map_err(Errors::PersistError)?;
 
     println!("🟢 {} (Active)", key.to_string().green());
 
@@ -88,7 +88,7 @@ fn reset<S: Store>(store: &mut S) -> Result<(), Errors> {
     let key = ConfigKey::Default;
     store
         .set_active_config(&key)
-        .map_err(|e| Errors::PersistError(e))?;
+        .map_err(Errors::PersistError)?;
 
     println!("🟢 Config reset to {}", key.to_string().green());
 
@@ -96,9 +96,7 @@ fn reset<S: Store>(store: &mut S) -> Result<(), Errors> {
 }
 
 fn list<S: Store>(store: &S) -> Result<(), Errors> {
-    let mut configurations = store
-        .get_configurations()
-        .map_err(|e| Errors::PersistError(e))?;
+    let mut configurations = store.get_configurations().map_err(Errors::PersistError)?;
 
     configurations.sort_by_key(|c| c.status.clone());
 
@@ -108,7 +106,7 @@ fn list<S: Store>(store: &S) -> Result<(), Errors> {
             .path
             .try_into()
             .ok()
-            .unwrap_or_else(|| format!("Invalid configuration path please update"));
+            .unwrap_or_else(|| "Invalid configuration path please update".into());
 
         match config.status {
             ConfigStatus::Active => println!("🟢 {} (Active) ➜ '{}'", key.green(), path),

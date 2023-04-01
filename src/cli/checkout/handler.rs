@@ -16,7 +16,7 @@ pub fn handler<G: Git, S: Store, P: Prompter>(
 ) -> Result<(), Errors> {
     let checkout = args
         .try_into_domain(prompt, &context.interactive)
-        .map_err(|e| Errors::UserInput(e))?;
+        .map_err(Errors::UserInput)?;
 
     checkout::handler(&context.git, &context.store, checkout)?;
 

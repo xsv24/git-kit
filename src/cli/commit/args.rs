@@ -62,7 +62,7 @@ impl Arguments {
     ) -> Result<String, UserInputError> {
         if interactive == Interactive::Disable {
             return Err(UserInputError::Required {
-                name: format!("template"),
+                name: "template".into(),
             });
         }
 

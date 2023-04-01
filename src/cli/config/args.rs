@@ -48,13 +48,11 @@ impl ConfigSet {
         Ok(match self.name {
             Some(name) => name.as_str().into(),
             None => prompt_configuration_select(
-                store
-                    .get_configurations()
-                    .map_err(|e| Errors::PersistError(e))?,
+                store.get_configurations().map_err(Errors::PersistError)?,
                 prompt,
                 interactive.to_owned(),
             )
-            .map_err(|e| Errors::UserInput(e))?,
+            .map_err(Errors::UserInput)?,
         })
     }
 }

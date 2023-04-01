@@ -45,7 +45,7 @@ impl AppConfig {
                 }),
         }?;
 
-        let git_root_dir = git.root_directory().map_err(|e| Errors::Git(e))?;
+        let git_root_dir = git.root_directory().map_err(Errors::Git)?;
         let config = Self::map_config_overrides(config, git_root_dir)?;
 
         Ok(AppConfig { config })

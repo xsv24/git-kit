@@ -18,7 +18,7 @@ pub fn handler<G: Git, S: Store, P: Prompter>(
     let templates = TemplateConfig::new(&context.config.path)?;
     let commit = args
         .try_into_domain(&templates, prompter, &context.interactive)
-        .map_err(|e| Errors::UserInput(e))?;
+        .map_err(Errors::UserInput)?;
 
     commit::handler(&context.git, &context.store, commit)?;
 

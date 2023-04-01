@@ -25,17 +25,17 @@ pub fn handler<G: Git, S: Store>(git: &G, store: &S, args: Checkout) -> Result<B
         log::error!("failed to create new branch: {}", err);
 
         git.checkout(&args.name, CheckoutStatus::Existing)
-            .map_err(|e| Errors::Git(e))?;
+            .map_err(Errors::Git)?;
     }
 
     // We want to store the branch name against and ticket number
     // So whenever we commit we get the ticket number from the branch
-    let repo_name = git.repository_name().map_err(|e| Errors::Git(e))?;
+    let repo_name = git.repository_name().map_err(Errors::Git)?;
 
     let branch = Branch::new(&args.name, &repo_name, args.ticket, args.link, args.scope);
     store
         .persist_branch(&branch)
-        .map_err(|e| Errors::PersistError(e))?;
+        .map_err(Errors::PersistError)?;
 
     Ok(branch)
 }

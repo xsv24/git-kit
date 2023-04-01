@@ -53,7 +53,7 @@ impl Prompter for Prompt {
     ) -> Result<SelectItem<T>, UserInputError> {
         let len = options.len();
         let select: Select<SelectItem<T>> = Select {
-            message: &format!("{}:", name),
+            message: &format!("{name}:"),
             options,
             help_message: Select::<SelectItem<T>>::DEFAULT_HELP_MESSAGE,
             page_size: len,
@@ -70,7 +70,7 @@ impl Prompter for Prompt {
     }
 
     fn text(&self, name: &str, default: Option<String>) -> Result<Option<String>, UserInputError> {
-        let result = Text::new(&format!("{}:", name))
+        let result = Text::new(&format!("{name}:"))
             .with_default(&default.unwrap_or("".into()))
             .with_render_config(Self::get_render_config())
             .prompt_skippable()
@@ -89,7 +89,7 @@ fn into_domain_error(name: &str, error: InquireError) -> UserInputError {
         | inquire::InquireError::IO(_)
         | inquire::InquireError::Custom(_)
         | inquire::InquireError::InvalidConfiguration(_) => UserInputError::Validation {
-            name: name.to_lowercase().into(),
+            name: name.to_lowercase(),
             message: "Failed completing prompt interaction, please try again or disable interactive mode\n--prompt disable".into()
         },
     }

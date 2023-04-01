@@ -34,7 +34,7 @@ impl TemplateConfig {
                     "Failed to read configuration at path '{}'",
                     config_path.to_string()
                 ),
-                source: e.into(),
+                source: e,
             })?;
 
         let config = serde_yaml::from_str::<TemplateConfig>(&config_contents).map_err(|e| {
