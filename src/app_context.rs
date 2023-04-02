@@ -1,17 +1,31 @@
 use crate::{
-    app_config::AppConfig,
-    domain::adapters::{Git, Store},
+    domain::{
+        adapters::{Git, Store},
+        models::Config,
+    },
+    entry::Interactive,
 };
 
-pub struct AppContext<C: Git, S: Store> {
+pub struct AppContext<G: Git, S: Store> {
     pub store: S,
-    pub git: C,
-    pub config: AppConfig,
+    pub git: G,
+    pub config: Config,
+    pub interactive: Interactive,
 }
 
-impl<C: Git, S: Store> AppContext<C, S> {
-    pub fn new(git: C, store: S, config: AppConfig) -> anyhow::Result<AppContext<C, S>> {
-        Ok(AppContext { store, git, config })
+impl<G: Git, S: Store> AppContext<G, S> {
+    pub fn new(
+        git: G,
+        store: S,
+        config: Config,
+        interactive: Interactive,
+    ) -> anyhow::Result<AppContext<G, S>> {
+        Ok(AppContext {
+            store,
+            git,
+            config,
+            interactive,
+        })
     }
 
     pub fn close(self) -> anyhow::Result<()> {

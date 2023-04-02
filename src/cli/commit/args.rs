@@ -1,18 +1,21 @@
-use std::fmt::Debug;
+use std::{collections::HashMap, fmt::Debug};
+
+use clap::Args;
 
 use crate::{
-    app_context::AppContext,
-    domain::adapters::{Git, Store},
-    utils::{merge, string::OptionStr},
+    domain::{
+        adapters::prompt::{Prompter, SelectItem},
+        commands::commit::Commit,
+        errors::UserInputError,
+    },
+    entry::Interactive,
+    template_config::{Template, TemplateConfig},
 };
-use anyhow::Context;
-use clap::Args;
-use regex::Regex;
 
 #[derive(Debug, Args, PartialEq, Eq, Clone)]
 pub struct Arguments {
     /// Name of the commit template to be used.
-    pub template: String,
+    pub template: Option<String>,
 
     /// Issue ticket number related to the commit.
     #[clap(short, long, value_parser)]
@@ -28,486 +31,273 @@ pub struct Arguments {
 }
 
 impl Arguments {
-    fn brackets_regex(target: &str) -> anyhow::Result<Regex> {
-        // Replace any surrounding brackets without content with an empty string and remove any trailing spaces.
-        // ({target}) | [{target}] | {{target}} | {target}
-        // example: http://regexr.com/75aee
-        let regex = Regex::new(&format!(
-            r"(\(\{{{}\}}\)\s?)|(\[\{{{}\}}\]\s?)|(\{{\{{{}\}}\}}\s?)|(\{{{}\}}\s?)",
-            target, target, target, target
-        ))?;
-
-        Ok(regex)
-    }
-
-    fn replace_or_remove(
-        message: String,
-        target: &str,
-        replace: Option<String>,
-    ) -> anyhow::Result<String> {
-        let template = format!("{{{}}}", target);
-
-        let message = match &replace.none_if_empty() {
-            Some(value) => {
-                log::info!("replace '{}' from template with '{}'", target, value);
-                message.replace(&template, value)
-            }
-            None => {
-                log::info!("removing '{}' from template", target);
-                Arguments::brackets_regex(target)
-                    .with_context(|| format!("Invalid template for parameter '{}'.", target))?
-                    .replace_all(&message, "")
-                    .into()
-            }
+    pub fn try_into_domain<P: Prompter>(
+        &self,
+        config: &TemplateConfig,
+        prompter: P,
+        interactive: &Interactive,
+    ) -> Result<Commit, UserInputError> {
+        let template = match &self.template {
+            Some(template) => template.into(),
+            None => Self::prompt_template_select(
+                config.commit.templates.clone(),
+                prompter,
+                interactive.to_owned(),
+            )?,
         };
 
-        Ok(message.trim().into())
+        // TODO: Could we do a prompt if no ticket / args found ?
+        Ok(Commit {
+            template: config.get_template_config(&template)?.clone(),
+            ticket: self.ticket.clone(),
+            message: self.message.clone(),
+            scope: self.scope.clone(),
+        })
     }
 
-    pub fn commit_message<C: Git, S: Store>(
-        &self,
-        template: String,
-        context: &AppContext<C, S>,
-    ) -> anyhow::Result<String> {
-        log::info!("generate commit message for '{}'", &template);
-        let branch = context
-            .store
-            .get_branch(&context.git.branch_name()?, &context.git.repository_name()?)
-            .ok();
+    fn prompt_template_select<P: Prompter>(
+        templates: HashMap<String, Template>,
+        prompter: P,
+        interactive: Interactive,
+    ) -> Result<String, UserInputError> {
+        if interactive == Interactive::Disable {
+            return Err(UserInputError::Required {
+                name: "template".into(),
+            });
+        }
 
-        let (ticket, scope, link) = branch
-            .map(|branch| (Some(branch.ticket), branch.scope, branch.link))
-            .unwrap_or((None, None, None));
+        let items = templates
+            .into_iter()
+            .map(|(name, template)| SelectItem {
+                name: name.clone(),
+                value: name,
+                description: Some(template.description),
+            })
+            .collect::<Vec<_>>();
 
-        let ticket = merge(self.ticket.clone().none_if_empty(), ticket.none_if_empty());
+        let selected = prompter.select("Template", items)?;
 
-        let scope = merge(self.scope.clone().none_if_empty(), scope.none_if_empty());
-
-        let contents = Self::replace_or_remove(template, "ticket_num", ticket)?;
-        let contents = Self::replace_or_remove(contents, "scope", scope)?;
-        let contents = Self::replace_or_remove(contents, "link", link)?;
-        let contents = Self::replace_or_remove(contents, "message", self.message.clone())?;
-
-        Ok(contents)
+        Ok(selected.name)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, path::PathBuf};
+    use super::*;
+    use anyhow::Context;
+    use fake::{Fake, Faker};
 
     use crate::{
-        adapters::sqlite::Sqlite,
-        app_config::{AppConfig, CommitConfig, TemplateConfig},
-        domain::{
-            adapters::{CheckoutStatus, CommitMsgStatus},
-            models::Branch,
-        },
-        migrations::{db_migrations, MigrationContext},
+        domain::{adapters::prompt::SelectItem, errors::UserInputError},
+        template_config::CommitConfig,
     };
-    use fake::{Fake, Faker};
-    use rusqlite::Connection;
 
-    use super::*;
+    #[test]
+    fn try_into_domain_with_no_interactive_prompts() -> anyhow::Result<()> {
+        let key = Faker.fake::<String>();
+        let value = fake_template(&key);
 
-    #[derive(Clone)]
-    struct TestCommand {
-        repo: String,
-        branch_name: String,
+        let args = Arguments {
+            template: Some(key.clone()),
+            ..fake_args()
+        };
+
+        let config = fake_template_config(Some((key.clone(), value.clone())));
+
+        let prompt = PromptTest {
+            select_item_name: Err(anyhow::anyhow!("select should not be called")),
+            text_result: Err(anyhow::anyhow!("text should not be called")),
+        };
+
+        let actual = args
+            .clone()
+            .try_into_domain(&config, prompt, &Interactive::Disable)?;
+
+        let expected = Commit {
+            template: value,
+            ticket: args.ticket.clone(),
+            scope: args.scope.clone(),
+            message: args.message.clone(),
+        };
+
+        assert_eq!(expected.template.content, actual.template.content);
+        assert_eq!(expected.message, actual.message);
+        assert_eq!(expected.scope, actual.scope);
+        assert_eq!(expected.ticket, actual.ticket);
+
+        Ok(())
     }
 
-    impl TestCommand {
-        fn fake() -> TestCommand {
-            TestCommand {
-                repo: Faker.fake(),
-                branch_name: Faker.fake(),
+    #[test]
+    fn try_into_domain_with_interactive_prompt_is_used_if_none() -> anyhow::Result<()> {
+        let key = Faker.fake::<String>();
+        let value = fake_template(&key);
+
+        let args = Arguments {
+            template: None,
+            ticket: None,
+            scope: None,
+            message: None,
+        };
+
+        let config = fake_template_config(Some((key.clone(), value.clone())));
+
+        let text_prompt = Faker.fake::<Option<String>>();
+
+        let prompt = PromptTest {
+            select_item_name: Ok(key.clone()),
+            text_result: Ok(text_prompt.clone()),
+        };
+
+        let actual = args
+            .clone()
+            .try_into_domain(&config, prompt, &Interactive::Enable)?;
+
+        let expected = Commit {
+            template: value,
+            ticket: text_prompt.clone(),
+            scope: text_prompt.clone(),
+            message: text_prompt.clone(),
+        };
+
+        assert_eq!(expected.template.description, actual.template.description);
+        assert_eq!(args.message, actual.message);
+        assert_eq!(args.scope, actual.scope);
+        assert_eq!(args.ticket, actual.ticket);
+
+        Ok(())
+    }
+
+    #[test]
+    fn try_into_domain_with_interactive_prompt_is_not_used_if_value_is_already_provided(
+    ) -> anyhow::Result<()> {
+        let key = Faker.fake::<String>();
+        let value = fake_template(&key);
+
+        let args = Arguments {
+            template: Some(key.clone()),
+            ticket: Some(Faker.fake()),
+            scope: Some(Faker.fake()),
+            message: Some(Faker.fake()),
+            ..fake_args()
+        };
+
+        let config = fake_template_config(Some((key.clone(), value.clone())));
+
+        let prompt = PromptTest {
+            select_item_name: Err(anyhow::anyhow!("select should not be called")),
+            text_result: Err(anyhow::anyhow!("text should not be called")),
+        };
+
+        let actual = args
+            .clone()
+            .try_into_domain(&config, prompt, &Interactive::Enable)?;
+
+        let expected = Commit {
+            template: value,
+            ticket: args.ticket.clone(),
+            scope: args.scope.clone(),
+            message: args.message.clone(),
+        };
+
+        assert_eq!(expected.template.description, actual.template.description);
+        assert_eq!(expected.message, actual.message);
+        assert_eq!(expected.scope, actual.scope);
+        assert_eq!(expected.ticket, actual.ticket);
+
+        Ok(())
+    }
+
+    #[test]
+    fn try_into_domain_with_interactive_prompt_disabled_and_no_template_provided_an_error_is_thrown(
+    ) {
+        let args = Arguments {
+            template: None,
+            ..fake_args()
+        };
+
+        let config = fake_template_config(None);
+
+        let prompt = PromptTest {
+            select_item_name: Err(anyhow::anyhow!("select should not be called")),
+            text_result: Err(anyhow::anyhow!("text should not be called")),
+        };
+
+        let error = args
+            .clone()
+            .try_into_domain(&config, prompt, &Interactive::Disable)
+            .unwrap_err();
+
+        assert_eq!(error.to_string(), "Missing required \"template\" input");
+    }
+
+    pub struct PromptTest {
+        select_item_name: anyhow::Result<String>,
+        text_result: anyhow::Result<Option<String>>,
+    }
+
+    impl Prompter for PromptTest {
+        fn text(&self, name: &str, _: Option<String>) -> Result<Option<String>, UserInputError> {
+            match &self.text_result {
+                Ok(option) => Ok(option.clone()),
+                Err(_) => Err(UserInputError::Validation {
+                    name: name.into(),
+                    message: "error".into(),
+                }),
+            }
+        }
+
+        fn select<T>(
+            &self,
+            name: &str,
+            options: Vec<SelectItem<T>>,
+        ) -> Result<SelectItem<T>, UserInputError> {
+            match &self.select_item_name {
+                Ok(name) => options
+                    .into_iter()
+                    .find(|i| i.name == name.clone())
+                    .context("Failed to get item")
+                    .map_err(|_| UserInputError::Validation {
+                        name: name.into(),
+                        message: "error".into(),
+                    }),
+                Err(_) => Err(UserInputError::Validation {
+                    name: name.into(),
+                    message: "error".into(),
+                }),
             }
         }
     }
 
-    impl Git for TestCommand {
-        fn repository_name(&self) -> anyhow::Result<String> {
-            Ok(self.repo.to_owned())
-        }
-
-        fn branch_name(&self) -> anyhow::Result<String> {
-            Ok(self.branch_name.to_owned())
-        }
-
-        fn checkout(&self, _name: &str, _status: CheckoutStatus) -> anyhow::Result<()> {
-            panic!("Did not expect Git 'checkout' to be called");
-        }
-
-        fn root_directory(&self) -> anyhow::Result<PathBuf> {
-            panic!("Did not expect Git 'root_directory' to be called");
-        }
-
-        fn template_file_path(&self) -> anyhow::Result<PathBuf> {
-            panic!("Did not expect Git 'template_file_path' to be called");
-        }
-
-        fn commit_with_template(
-            &self,
-            _: &std::path::Path,
-            _: CommitMsgStatus,
-        ) -> anyhow::Result<()> {
-            panic!("Did not expect Git 'commit_with_template' to be called");
+    fn fake_template(description: &str) -> Template {
+        Template {
+            description: description.into(),
+            content: Faker.fake(),
         }
     }
 
-    #[test]
-    fn empty_ticket_num_removes_square_brackets() -> anyhow::Result<()> {
-        let context = AppContext {
-            store: Sqlite::new(setup_db(None)?)?,
-            git: TestCommand::fake(),
-            config: fake_config(),
-        };
+    fn fake_template_config(selected: Option<(String, Template)>) -> TemplateConfig {
+        let mut map = HashMap::from([
+            ("option-1".into(), fake_template("option-1")),
+            ("option-2".into(), fake_template("option-2")),
+            ("option-3".into(), fake_template("option-3")),
+        ]);
 
-        let args = Arguments {
-            ticket: Some("".into()),
-            message: Some(Faker.fake()),
-            ..fake_args()
-        };
-
-        let actual = args.commit_message("{ticket_num} {message}".into(), &context)?;
-        let expected = format!("{}", args.message.unwrap());
-
-        context.close()?;
-        assert_eq!(actual, expected);
-
-        Ok(())
-    }
-
-    #[test]
-    fn empty_scope_removes_parentheses() -> anyhow::Result<()> {
-        let context = AppContext {
-            store: Sqlite::new(setup_db(None)?)?,
-            git: TestCommand::fake(),
-            config: fake_config(),
-        };
-
-        let args = Arguments {
-            message: Some(Faker.fake()),
-            scope: Some("".into()),
-            ticket: Some(Faker.fake()),
-            ..fake_args()
-        };
-
-        let actual = args.commit_message("({scope}) [{ticket_num}] {message}".into(), &context)?;
-        let expected = format!("[{}] {}", args.ticket.unwrap(), args.message.unwrap());
-
-        context.close()?;
-        assert_eq!(actual, expected);
-
-        Ok(())
-    }
-
-    #[test]
-    fn when_ticket_num_is_empty_square_brackets_are_removed() -> anyhow::Result<()> {
-        for ticket in [Some("".into()), Some("   ".into()), None] {
-            let context = AppContext {
-                store: Sqlite::new(setup_db(None)?)?,
-                git: TestCommand::fake(),
-                config: fake_config(),
-            };
-
-            let args = Arguments {
-                ticket,
-                message: Some(Faker.fake()),
-                ..fake_args()
-            };
-
-            let actual = args.commit_message("[{ticket_num}] {message}".into(), &context)?;
-            let expected = format!("{}", args.message.unwrap());
-
-            context.close()?;
-            assert_eq!(actual, expected);
+        if let Some((key, item)) = selected {
+            map.insert(key, item);
         }
 
-        Ok(())
-    }
+        let config = CommitConfig { templates: map };
 
-    #[test]
-    fn commit_message_with_both_args_are_populated() -> anyhow::Result<()> {
-        let context = AppContext {
-            store: Sqlite::new(setup_db(None)?)?,
-            git: TestCommand::fake(),
-            config: fake_config(),
-        };
-
-        let args = Arguments {
-            template: Faker.fake(),
-            ticket: Some(Faker.fake()),
-            message: Some(Faker.fake()),
-            ..fake_args()
-        };
-
-        let actual = args.commit_message("[{ticket_num}] {message}".into(), &context)?;
-        let expected = format!("[{}] {}", args.ticket.unwrap(), args.message.unwrap());
-
-        context.close()?;
-        assert_eq!(actual, expected);
-
-        Ok(())
-    }
-
-    #[test]
-    fn commit_template_message_is_replaced_with_empty_str() -> anyhow::Result<()> {
-        let context = AppContext {
-            store: Sqlite::new(setup_db(None)?)?,
-            git: TestCommand::fake(),
-            config: fake_config(),
-        };
-
-        let args = Arguments {
-            ticket: Some(Faker.fake()),
-            message: None,
-            ..fake_args()
-        };
-
-        let actual = args.commit_message("{ticket_num} {message}".into(), &context)?;
-        let expected = format!("{}", args.ticket.unwrap());
-
-        context.close()?;
-        assert_eq!(expected.trim(), actual);
-
-        Ok(())
-    }
-
-    #[test]
-    fn commit_template_with_empty_brackets_such_as_markdown_checklist_are_not_removed(
-    ) -> anyhow::Result<()> {
-        let context = AppContext {
-            store: Sqlite::new(setup_db(None)?)?,
-            git: TestCommand::fake(),
-            config: fake_config(),
-        };
-
-        let args = Arguments {
-            message: Some(Faker.fake()),
-            ticket: None,
-            scope: None,
-            ..fake_args()
-        };
-
-        let actual = args.commit_message(
-            "fix({scope}): [{ticket_num}] {message}\n- done? [ ]".into(),
-            &context,
-        )?;
-        let expected = format!("fix: {}\n- done? [ ]", args.message.unwrap());
-
-        context.close()?;
-        assert_eq!(expected.trim(), actual);
-        Ok(())
-    }
-
-    #[test]
-    fn commit_template_ticket_num_is_replaced_with_branch_name() -> anyhow::Result<()> {
-        let commands = TestCommand::fake();
-
-        let branch = Branch::new(&commands.branch_name, &commands.repo, None, None, None)?;
-
-        let context = AppContext {
-            store: Sqlite::new(setup_db(Some(&branch))?)?,
-            git: commands.clone(),
-            config: fake_config(),
-        };
-
-        let args = Arguments {
-            ticket: None,
-            ..fake_args()
-        };
-
-        let actual = args.commit_message("[{ticket_num}] {message}".into(), &context)?;
-        let expected = format!(
-            "[{}] {}",
-            &commands.branch_name,
-            args.message.unwrap_or_else(|| "".into())
-        );
-
-        context.close()?;
-        assert_eq!(expected.trim(), actual);
-
-        Ok(())
+        TemplateConfig { commit: config }
     }
 
     fn fake_args() -> Arguments {
         Arguments {
             template: Faker.fake(),
             ticket: Faker.fake(),
-            message: Faker.fake(),
             scope: Faker.fake(),
+            message: Faker.fake(),
         }
-    }
-
-    fn get_arguments(args: Option<Arguments>) -> Vec<(&'static str, Arguments)> {
-        let args = args.unwrap_or_else(fake_args);
-
-        vec![
-            (
-                "🐛",
-                Arguments {
-                    template: "bug".into(),
-                    ..args.clone()
-                },
-            ),
-            (
-                "✨",
-                Arguments {
-                    template: "feature".into(),
-                    ..args.clone()
-                },
-            ),
-            (
-                "🧹",
-                Arguments {
-                    template: "refactor".into(),
-                    ..args.clone()
-                },
-            ),
-            (
-                "⚠️",
-                Arguments {
-                    template: "break".into(),
-                    ..args.clone()
-                },
-            ),
-            (
-                "📦",
-                Arguments {
-                    template: "deps".into(),
-                    ..args.clone()
-                },
-            ),
-            (
-                "📖",
-                Arguments {
-                    template: "docs".into(),
-                    ..args.clone()
-                },
-            ),
-            (
-                "🧪",
-                Arguments {
-                    template: "test".into(),
-                    ..args.clone()
-                },
-            ),
-        ]
-    }
-
-    #[test]
-    fn get_template_config_by_name_key() -> anyhow::Result<()> {
-        let config = fake_config();
-
-        for (content, arguments) in get_arguments(None) {
-            let template_config = config.get_template_config(&arguments.template)?;
-            assert!(template_config.content.contains(content))
-        }
-
-        Ok(())
-    }
-
-    #[test]
-    fn brackets_match() {
-        let regex = Arguments::brackets_regex("target").unwrap();
-        assert!(regex.is_match("[{target}]"));
-        assert!(regex.is_match("[{target}] "));
-        assert!(regex.is_match("({target})"));
-        assert!(regex.is_match("({target})\t"));
-        assert!(regex.is_match("{{target}} "));
-        assert!(regex.is_match("{target}"));
-    }
-
-    fn fake_template_config() -> HashMap<String, TemplateConfig> {
-        let mut map = HashMap::new();
-
-        map.insert(
-            "bug".into(),
-            TemplateConfig {
-                description: Faker.fake(),
-                content: "{ticket_num} 🐛 {message}".into(),
-            },
-        );
-        map.insert(
-            "feature".into(),
-            TemplateConfig {
-                description: Faker.fake(),
-                content: "{ticket_num} ✨ {message}".into(),
-            },
-        );
-        map.insert(
-            "refactor".into(),
-            TemplateConfig {
-                description: Faker.fake(),
-                content: "{ticket_num} 🧹 {message}".into(),
-            },
-        );
-        map.insert(
-            "break".into(),
-            TemplateConfig {
-                description: Faker.fake(),
-                content: "{ticket_num} ⚠️ {message}".into(),
-            },
-        );
-        map.insert(
-            "deps".into(),
-            TemplateConfig {
-                description: Faker.fake(),
-                content: "{ticket_num} 📦 {message}".into(),
-            },
-        );
-        map.insert(
-            "docs".into(),
-            TemplateConfig {
-                description: Faker.fake(),
-                content: "{ticket_num} 📖 {message}".into(),
-            },
-        );
-        map.insert(
-            "test".into(),
-            TemplateConfig {
-                description: Faker.fake(),
-                content: "{ticket_num} 🧪 {message}".into(),
-            },
-        );
-
-        map
-    }
-
-    fn fake_config() -> AppConfig {
-        AppConfig {
-            commit: CommitConfig {
-                templates: fake_template_config(),
-            },
-        }
-    }
-
-    fn setup_db(branch: Option<&Branch>) -> anyhow::Result<Connection> {
-        let mut conn = Connection::open_in_memory()?;
-
-        db_migrations(
-            &mut conn,
-            MigrationContext {
-                default_configs: None,
-                version: None,
-            },
-        )?;
-
-        if let Some(branch) = branch {
-            conn.execute(
-                "INSERT INTO branch (name, ticket, data, created, link, scope) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-                (
-                    &branch.name,
-                    &branch.ticket,
-                    &branch.data,
-                    branch.created.to_rfc3339(),
-                    &branch.link,
-                    &branch.scope
-                ),
-            )?;
-        }
-
-        Ok(conn)
     }
 }

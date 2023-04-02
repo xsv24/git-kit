@@ -1,108 +1,134 @@
-use crate::domain::{
-    adapters::{Git, Store},
-    models::{Config, ConfigKey, ConfigStatus},
-};
-use crate::AppConfig;
+use crate::domain::adapters::prompt::Prompter;
+use crate::domain::adapters::Store;
+use crate::domain::errors::{Errors, UserInputError};
+use crate::domain::models::path::{AbsolutePath, PathType};
+use crate::domain::models::{Config, ConfigKey, ConfigStatus};
+use crate::entry::Interactive;
 
+use super::args::{ConfigAdd, ConfigSet};
 use super::Arguments;
 use colored::Colorize;
-use inquire::{
-    ui::{Color, RenderConfig, Styled},
-    Select,
-};
 
-pub fn handler<S: Store, G: Git>(
+pub fn handler<S: Store, P: Prompter>(
     store: &mut S,
-    git: &G,
+    config_key: &ConfigKey,
     arguments: Arguments,
-) -> anyhow::Result<()> {
-    inquire::set_global_render_config(get_render_config());
+    prompt: P,
+    interactive: &Interactive,
+) -> Result<(), Errors> {
+    local_config_warning(config_key);
 
     match arguments {
-        Arguments::Add { name, path } => {
-            let config = add(store, name, path)?;
-            local_config_warning(git)?;
-            println!("🟢 {}", config.key.to_string().green());
-        }
-        Arguments::Set { name } => {
-            let config = set(store, name)?;
-            local_config_warning(git)?;
-            println!("🟢 {} (Active) ", config.key.to_string().green());
-        }
-        Arguments::Reset => {
-            let config = reset(store)?;
-            local_config_warning(git)?;
-            println!("🟢 Config reset to {}", config.key.to_string().green());
-        }
-        Arguments::Show => {
-            let configurations = list(store)?;
-            local_config_warning(git)?;
-
-            for config in configurations {
-                let key = config.key.to_string();
-                let path = config.path.display();
-
-                match config.status {
-                    ConfigStatus::Active => println!("🟢 {} (Active) ➜ '{}'", key.green(), path),
-                    ConfigStatus::Disabled => println!("🔴 {} ➜ '{}'", key, path),
-                }
-            }
-        }
-    };
+        Arguments::Add(args) => add(args, store),
+        Arguments::Set(args) => set(args, store, prompt, interactive),
+        Arguments::Reset => reset(store),
+        Arguments::Show => list(store),
+    }?;
 
     Ok(())
 }
 
-fn add<S: Store>(store: &mut S, name: String, path: String) -> anyhow::Result<Config> {
-    let config = Config::new(name.into(), path, ConfigStatus::Active)?;
+fn add<S: Store>(args: ConfigAdd, store: &mut S) -> Result<(), Errors> {
+    let key = ConfigKey::from(args.name.as_str());
 
-    store.persist_config(&config)?;
+    if !key.is_overridable() {
+        return Err(Errors::UserInput(UserInputError::Validation {
+            name: "name".into(),
+            message: format!(
+                "Configuration '{}' cannot be overridden please choose another name",
+                args.name
+            ),
+        }));
+    }
 
-    store.set_active_config(config.key)
-}
+    let path = AbsolutePath::try_from(args.path, PathType::File)
+        .map_err(|e| UserInputError::Validation {
+            name: "path".into(),
+            message: e.to_string(),
+        })
+        .map_err(Errors::UserInput)?;
 
-fn set<S: Store>(store: &mut S, name: Option<String>) -> anyhow::Result<Config> {
-    let name = if let Some(name) = name {
-        name
-    } else {
-        let configurations: Vec<String> = store
-            .get_configurations()?
-            .iter()
-            .map(|config| config.key.clone().into())
-            .collect();
-
-        Select::new("Configuration:", configurations).prompt()?
+    let config = Config {
+        key,
+        path,
+        status: ConfigStatus::Active,
     };
 
-    store.set_active_config(ConfigKey::from(name))
+    store
+        .persist_config(&config)
+        .map_err(Errors::PersistError)?;
+
+    store
+        .set_active_config(&config.key)
+        .map_err(Errors::PersistError)?;
+
+    println!("🟢 {} (Active)", config.key.to_string().green());
+
+    Ok(())
 }
 
-fn reset<S: Store>(store: &mut S) -> anyhow::Result<Config> {
-    store.set_active_config(ConfigKey::Default)
+fn set<S: Store, P: Prompter>(
+    args: ConfigSet,
+    store: &mut S,
+    prompt: P,
+    interactive: &Interactive,
+) -> Result<(), Errors> {
+    let key = args.try_into_domain(store, prompt, interactive)?;
+
+    store
+        .set_active_config(&key)
+        .map_err(Errors::PersistError)?;
+
+    println!("🟢 {} (Active)", key.to_string().green());
+
+    Ok(())
 }
 
-fn list<S: Store>(store: &mut S) -> anyhow::Result<Vec<Config>> {
-    let mut configurations = store.get_configurations()?;
+fn reset<S: Store>(store: &mut S) -> Result<(), Errors> {
+    let key = ConfigKey::Default;
+    store
+        .set_active_config(&key)
+        .map_err(Errors::PersistError)?;
+
+    println!("🟢 Config reset to {}", key.to_string().green());
+
+    Ok(())
+}
+
+fn list<S: Store>(store: &S) -> Result<(), Errors> {
+    let mut configurations = store.get_configurations().map_err(Errors::PersistError)?;
+
     configurations.sort_by_key(|c| c.status.clone());
 
-    Ok(configurations)
-}
+    for config in configurations {
+        let key = config.key.to_string();
+        let path: String = config
+            .path
+            .try_into()
+            .ok()
+            .unwrap_or_else(|| "Invalid configuration path please update".into());
 
-fn local_config_warning<G: Git>(git: &G) -> anyhow::Result<()> {
-    let local_config_path = AppConfig::join_config_filename(&git.root_directory()?);
-
-    if local_config_path.exists() {
-        println!("{}: 'Active' configurations are currently overridden due to a local repo configuration being used.\n", "⚠️ Warning".yellow());
+        match config.status {
+            ConfigStatus::Active => println!("🟢 {} (Active) ➜ '{}'", key.green(), path),
+            ConfigStatus::Disabled => println!("🔴 {key} ➜ '{path}'"),
+        }
     }
 
     Ok(())
 }
 
-fn get_render_config() -> RenderConfig {
-    RenderConfig {
-        highlighted_option_prefix: Styled::new("➜").with_fg(Color::LightBlue),
-        selected_checkbox: Styled::new("✅").with_fg(Color::LightGreen),
-        unselected_checkbox: Styled::new("🔳"),
-        ..RenderConfig::default()
+fn local_config_warning(config_key: &ConfigKey) {
+    let warn_message = match config_key {
+        ConfigKey::Once => Some("'once off' --config"),
+        ConfigKey::Local => Some("'local' repository"),
+        ConfigKey::User(_) | ConfigKey::Default | ConfigKey::Conventional => None,
+    };
+
+    if let Some(msg) = warn_message {
+        println!(
+            "{}: (Active) configurations are currently overridden due to a {} configuration being used.\n",
+            "⚠️ Warning".yellow(),
+            msg
+        );
     }
 }
