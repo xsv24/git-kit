@@ -3,7 +3,7 @@
 mod migrations;
 
 use std::{
-    env, fs, io,
+    env, fs,
     path::{Path, PathBuf},
 };
 
@@ -69,8 +69,13 @@ fn copy_or_replace(source_path: &PathBuf, target_path: &PathBuf) -> anyhow::Resu
                 &target_path.exists(),
                 &target_path.display()
             );
-            fs::copy(source_path, target_path)
-                .with_context(|| format!("Failed to copy from: {:?}, to: {:?}", source_path.as_os_str(), target_path.as_os_str()))?;
+            fs::copy(source_path, target_path).with_context(|| {
+                format!(
+                    "Failed to copy from: {:?}, to: {:?}",
+                    source_path.as_os_str(),
+                    target_path.as_os_str()
+                )
+            })?;
         }
     }
 
