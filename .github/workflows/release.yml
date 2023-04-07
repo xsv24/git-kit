@@ -120,7 +120,7 @@ jobs:
         run: |
           compressed="git-kit-${{ needs.prep.outputs.tag_version }}-${{ matrix.target }}"
           mkdir $compressed
-          cp {README.md,LICENSE} "$compressed/"
+          cp {README.md,LICENSE,templates/conventional.yml,templates/default.yml} "$compressed/"
 
           if [ "${{ matrix.os }}" = "windows-2022" ]; then
             cp "target/${{ matrix.target }}/release/$BIN_NAME.exe" "$compressed/"
