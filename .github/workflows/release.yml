@@ -5,6 +5,9 @@ on:
 
 name: release
 
+permissions:
+  actions: write
+
 env:
   BIN_NAME: git-kit
 
