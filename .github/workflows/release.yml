@@ -102,7 +102,7 @@ jobs:
 
       - name: Build release binary
         uses: actions-rs/cargo@v1
-        env:
+        # env:
           # BUILD_DISABLED: "true"
         with:
           # use-cross: true
