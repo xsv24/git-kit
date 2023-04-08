@@ -118,7 +118,7 @@ jobs:
       - name: Build archive
         shell: bash
         run: |
-          compressed="git-kit-${{ needs.prep.outputs.tag_version }}-${{ matrix.target }}"
+          compressed="git-kit-${{ matrix.target }}"
           mkdir $compressed
           cp {README.md,LICENSE,templates/conventional.yml,templates/default.yml} "$compressed/"
 
