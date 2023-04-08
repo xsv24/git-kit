@@ -99,7 +99,6 @@ jobs:
         if: matrix.build == 'linux-arm' || matrix.build ==  'linux-x86' 
         run: |
           mkdir ~/.config/git-kit
-          chown -R $USER:$USER ~/.config/git-kit
 
       - name: Build release binary
         uses: actions-rs/cargo@v1
