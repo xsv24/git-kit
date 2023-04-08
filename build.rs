@@ -17,7 +17,7 @@ fn main() -> anyhow::Result<()> {
         // Create config dir if not exists.
         fs::create_dir_all(&config_dir).ok();
 
-        copy_or_replace(&project_root.join("templates"), &config_dir)
+        copy_or_replace(&project_root.join("templates"), &config_dir.to_path_buf())
             .context("Failed to copy or update to the latest config file for git-kit")?;
     }
 
