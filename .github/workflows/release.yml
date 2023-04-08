@@ -102,10 +102,10 @@ jobs:
 
       - name: Build release binary
         uses: actions-rs/cargo@v1
-        # env:
-          # BUILD_DISABLED: "true"
+        env:
+          BUILD_DISABLED: "true"
         with:
-          # use-cross: true
+          use-cross: true
           command: build
           args: --verbose --release --target=${{ matrix.target }}
 
