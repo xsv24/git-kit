@@ -1,7 +1,3 @@
-// Imported manually overwise we need a separate sub crate thats published.
-#[path = "src/migrations.rs"]
-mod migrations;
-
 use std::{
     env, fs,
     path::{Path, PathBuf},
@@ -9,8 +5,6 @@ use std::{
 
 use anyhow::Context;
 use directories::ProjectDirs;
-use migrations::{db_migrations, MigrationContext};
-use rusqlite::Connection;
 
 // Build script to copy over default templates & config into the binary directory.
 fn main() -> anyhow::Result<()> {
@@ -26,24 +20,6 @@ fn main() -> anyhow::Result<()> {
 
         copy_or_replace(&project_root.join("templates"), &config_dir.to_path_buf())
             .context("Failed to copy or update to the latest config file for git-kit")?;
-
-        let mut connection =
-            Connection::open(config_dir.join("db")).expect("Failed to open sqlite connection");
-
-        db_migrations(
-            &mut connection,
-            MigrationContext {
-                default_configs: Some(migrations::DefaultConfig {
-                    default: config_dir.join("default.yml"),
-                    conventional: config_dir.join("conventional.yml"),
-                }),
-                version: Some(4),
-            },
-        )
-        .expect("Failed to apply migrations.");
-        connection
-            .close()
-            .expect("Failed to close sqlite connection");
     }
 
     println!("cargo:rerun-if-changed=build.rs");
