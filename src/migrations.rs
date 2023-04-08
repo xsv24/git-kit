@@ -13,14 +13,16 @@ pub struct DefaultConfig {
 #[derive(Clone)]
 pub struct MigrationContext {
     pub default_configs: Option<DefaultConfig>,
-    pub version: Option<usize>,
+    pub version: usize,
 }
 
-#[allow(dead_code)]
 pub fn db_migrations(
     connection: &mut Connection,
     context: MigrationContext,
 ) -> anyhow::Result<Migrations> {
+    log::info!("Run migrations for version {}", context.version);
+
+    // TODO: Move the migrations into a directory https://github.com/cljoly/rusqlite_migration/blob/08dc155cdedc83a2aef1017e95315fa6ca501daf/examples/from-directory/migrations/01-friend_car/up.sql#L1
     let migrations = Migrations::new(vec![
         M::up(
             "CREATE TABLE IF NOT EXISTS branch (
@@ -45,15 +47,9 @@ pub fn db_migrations(
             .down("ALTER TABLE branch DROP COLUMN scope;"),
     ]);
 
-    if let Some(version) = context.version {
-        migrations
-            .to_version(connection, version)
-            .with_context(|| format!("Failed to apply migration version '{version}'"))?;
-    } else {
-        migrations
-            .to_latest(connection)
-            .context("Failed to apply latest migration")?;
-    };
+    migrations
+        .to_version(connection, context.version)
+        .with_context(|| format!("Failed to apply migration version '{}'", context.version))?;
 
     let version: usize = migrations
         .current_version(connection)
@@ -64,7 +60,7 @@ pub fn db_migrations(
         migrate_default_configuration(config_paths, connection, version)?;
     }
 
-    println!("git-kit migration version '{version}'.");
+    log::info!("Migrations complete for version '{}'.", context.version);
 
     Ok(migrations)
 }
@@ -136,7 +132,7 @@ mod tests {
     fn verify_migration_1() {
         let (_, tables, _) = arrange(MigrationContext {
             default_configs: None,
-            version: Some(1),
+            version: 1,
         });
 
         assert_eq!(tables.len(), 1);
@@ -150,7 +146,7 @@ mod tests {
                 default: Path::new("default.yml").to_owned(),
                 conventional: PathBuf::new(),
             }),
-            version: Some(2),
+            version: 2,
         };
         let (connection, tables, _) = arrange(context);
 
@@ -175,7 +171,7 @@ mod tests {
                 default: Path::new("default.yml").to_owned(),
                 conventional: Path::new("conventional.yml").to_owned(),
             }),
-            version: Some(4),
+            version: 4,
         };
         let (connection, tables, _) = arrange(context);
 
@@ -204,7 +200,7 @@ mod tests {
         // Apply a previous version first.
         let context = MigrationContext {
             default_configs: None,
-            version: Some(2),
+            version: 2,
         };
         let (connection, ..) = arrange(context);
 
@@ -225,7 +221,7 @@ mod tests {
                 default: Path::new("default.yml").to_owned(),
                 conventional: Path::new("conventional.yml").to_owned(),
             }),
-            version: Some(4),
+            version: 4,
         };
 
         let (connection, ..) = arrange(context);

@@ -40,7 +40,7 @@ pub fn fake_context<'a, C: Git>(git: C, config: Config) -> anyhow::Result<AppCon
         &mut connection,
         MigrationContext {
             default_configs: None,
-            version: None,
+            version: 4,
         },
     )?;
 

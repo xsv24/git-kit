@@ -792,7 +792,7 @@ mod tests {
             &mut conn,
             MigrationContext {
                 default_configs: None,
-                version: None,
+                version: 4,
             },
         )?;
         Ok(conn)
