@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
 # exit on any error
 set -euo pipefail
@@ -57,7 +57,7 @@ derive_binary_name() {
         *) error "Currently unsupported architecture '${arch}'" && exit 1 ;;
     esac
 
-    echo "$NAME--$arch-$plat"
+    echo "$NAME-$arch-$plat"
 }
 
 unzip() {

@@ -12,7 +12,9 @@ fn main() -> anyhow::Result<()> {
         // https://doc.rust-lang.org/cargo/reference/environment-variables.html
         let project_root = Path::new(env!("CARGO_MANIFEST_DIR"));
         let config_dir = dirs.config_dir();
-        let config_dir = fs::canonicalize(config_dir.to_path_buf())
+        println!("Updating config file... {}", config_dir.display());
+
+        let config_dir = fs::canonicalize(config_dir)
             .context("Failed to convert config directory to absolute path")?;
 
         println!("Updating config file...");
