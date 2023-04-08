@@ -12,13 +12,15 @@ fn main() -> anyhow::Result<()> {
         // https://doc.rust-lang.org/cargo/reference/environment-variables.html
         let project_root = Path::new(env!("CARGO_MANIFEST_DIR"));
         let config_dir = dirs.config_dir();
+        let config_dir = fs::canonicalize(config_dir.to_path_buf())
+            .context("Failed to convert config directory to absolute path")?;
 
         println!("Updating config file...");
 
         // Create config dir if not exists.
-        fs::create_dir(config_dir).ok();
+        fs::create_dir(&config_dir).ok();
 
-        copy_or_replace(&project_root.join("templates"), &config_dir.to_path_buf())
+        copy_or_replace(&project_root.join("templates"), &config_dir)
             .context("Failed to copy or update to the latest config file for git-kit")?;
     }
 
