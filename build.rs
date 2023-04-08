@@ -8,6 +8,16 @@ use directories::ProjectDirs;
 
 // Build script to copy over default templates & config into the binary directory.
 fn main() -> anyhow::Result<()> {
+    println!("cargo:rerun-if-env-changed=BUILD_DISABLED");
+    let build_disabled = env::var("BUILD_DISABLED")
+        .map(|v| v == "true")
+        .unwrap_or(false);
+
+    if build_disabled {
+        println!("build.rs disabled exiting");
+        return Ok(());
+    }
+
     if let Some(dirs) = ProjectDirs::from("dev", "xsv24", "git-kit") {
         // https://doc.rust-lang.org/cargo/reference/environment-variables.html
         let project_root = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -15,9 +25,7 @@ fn main() -> anyhow::Result<()> {
         println!("Updating config file... {} {}", config_dir.display(), config_dir.exists());
 
         // Create config dir if not exists.
-        if !config_dir.exists() {
-            fs::create_dir_all(config_dir).ok();
-        }
+        fs::create_dir_all(config_dir).ok();
 
         copy_or_replace(&project_root.join("templates"), &config_dir.to_path_buf())
             .context("Failed to copy or update to the latest config file for git-kit")?;
