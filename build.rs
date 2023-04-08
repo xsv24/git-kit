@@ -14,13 +14,8 @@ fn main() -> anyhow::Result<()> {
         let config_dir = dirs.config_dir();
         println!("Updating config file... {}", config_dir.display());
 
-        let config_dir = fs::canonicalize(config_dir)
-            .context("Failed to convert config directory to absolute path")?;
-
-        println!("Updating config file...");
-
         // Create config dir if not exists.
-        fs::create_dir(&config_dir).ok();
+        fs::create_dir_all(&config_dir).ok();
 
         copy_or_replace(&project_root.join("templates"), &config_dir)
             .context("Failed to copy or update to the latest config file for git-kit")?;
