@@ -12,7 +12,7 @@ fn main() -> anyhow::Result<()> {
         // https://doc.rust-lang.org/cargo/reference/environment-variables.html
         let project_root = Path::new(env!("CARGO_MANIFEST_DIR"));
         let config_dir = dirs.config_dir();
-        println!("Updating config file... {}", config_dir.display());
+        println!("Updating config file... {} {}", config_dir.display(), config_dir.exists());
 
         // Create config dir if not exists.
         fs::create_dir_all(config_dir).ok();

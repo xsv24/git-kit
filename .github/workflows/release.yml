@@ -95,6 +95,11 @@ jobs:
           target: ${{ matrix.target }}
           override: true
 
+      - name: Give access to .config
+        if: matrix.build == 'linux-arm' || matrix.build ==  'linux-x86' 
+        run: |
+          chown -R $USER:$USER ~/.config
+
       - name: Build release binary
         uses: actions-rs/cargo@v1
         with:
