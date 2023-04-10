@@ -64,13 +64,13 @@ derive_platform() {
     arch="$1"
     plat=$(uname -s | tr '[:upper:]' '[:lower:]')
     case "${plat}-${arch}" in
-        msys_nt*) plat="pc-windows-msvc" ;;
-        cygwin_nt*) plat="pc-windows-msvc";;
-        mingw*) plat="pc-windows-msvc" ;;
-        darwin-*) plat="apple-darwin" ;;
-        linux-arm) plat="unknown-linux-gnueabihf" ;;
-        linux-*) plat="unknown-linux-musl" ;;
-        freebsd-*) plat="unknown-freebsd" ;;
+        msys_nt*) echo "pc-windows-msvc" ;;
+        cygwin_nt*) echo "pc-windows-msvc";;
+        mingw*) echo "pc-windows-msvc" ;;
+        darwin-*) echo "apple-darwin" ;;
+        linux-arm) echo "unknown-linux-gnueabihf" ;;
+        linux-*) echo "unknown-linux-musl" ;;
+        freebsd-*) echo "unknown-freebsd" ;;
     esac
 }
 
