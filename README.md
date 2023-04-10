@@ -92,13 +92,13 @@ git-kit config set conventional
   Install the latest version:
 
   ```bash
-  curl -sS https://raw.githubusercontent.com/xsv24/git-kit/main/install/install.sh | sh
+  curl -sS https://raw.githubusercontent.com/xsv24/git-kit/main/scripts/install.sh | sh
   ```
 
   Depending on your setup you may need to run the script with `sudo`.
 
   ```bash
-  curl -sS https://raw.githubusercontent.com/xsv24/git-kit/main/install/install.sh | sudo sh -s - -b /usr/local/bin
+  curl -sS https://raw.githubusercontent.com/xsv24/git-kit/main/scripts/install.sh | sudo sh -s - -b /usr/local/bin
   ```
 </details>
 
@@ -110,7 +110,7 @@ git-kit config set conventional
   Install the latest version:
 
   ```bash
-  curl -sS https://raw.githubusercontent.com/xsv24/git-kit/main/install/install.sh | sh
+  curl -sS https://raw.githubusercontent.com/xsv24/git-kit/main/scripts/install.sh | sh
   ```
 </details>
 
