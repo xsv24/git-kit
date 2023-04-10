@@ -74,19 +74,57 @@ git-kit config set conventional
 - `scope` Short description of a section of the codebase the commit relates to.
 
 ## ⏳ Install Binary
+<details>
+  <summary>🦀 Rust's Cargo</summary>
+ 
+  Install the latest version via [Rust](https://www.rust-lang.org/tools/install). 
 
-### Rust
-- Install [Rust](https://www.rust-lang.org/tools/install)
+  ```bash
+  cargo install git-kit
+  ```
+</details>
 
-```bash
-cargo install git-kit
-```
+<details>
+  <summary>🍏 MacOS</summary>
+  
+  > Homebrew coming soon 🤞
+
+  Install the latest version:
+
+  ```bash
+  curl -sS https://raw.githubusercontent.com/xsv24/git-kit/main/install/install.sh | sh
+  ```
+
+  Depending on your setup you may need to run the script with `sudo`.
+
+  ```bash
+  curl -sS https://raw.githubusercontent.com/xsv24/git-kit/main/install/install.sh | sudo sh -s - -b /usr/local/bin
+  ```
+</details>
+
+<details>
+  <summary>🐧 Linux</summary>
+  
+  > Package managers coming soon 🤞
+  Install the latest version:
+
+  ```bash
+  curl -sS https://raw.githubusercontent.com/xsv24/git-kit/main/install/install.sh | sh
+  ```
+</details>
+
+<details>
+  <summary>🪟 Windows</summary>
+
+  > Coming soon 🤞
+</details>
+
+---
+## 🏎️💨 Getting Started
 
 ```bash
 git-kit --help
 ```
-
-## 🏎️💨 Getting Started
 
 ```bash
 # Checkout a new branch & add optional context params.

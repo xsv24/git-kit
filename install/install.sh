@@ -42,21 +42,41 @@ derive_zip_ext() {
     esac
 }
 
-derive_binary_name() {
-    plat=$(uname -s | tr '[:upper:]' '[:lower:]')
-    case "${plat}" in
-        darwin) plat="apple-darwin" ;;
-        # Add as needed
-        *) error "Currently unsupported OS platform '${plat}'" && exit 1 ;;
-    esac
-    
+derive_arch() {
     arch=$(uname -m | tr '[:upper:]' '[:lower:]')
     case "${arch}" in
         amd64 | x86_64) arch="x86_64" ;;
         armv*) arch="arm" ;;
         arm64) arch="aarch64" ;;
-        *) error "Currently unsupported architecture '${arch}' for '${plat}'" && exit 1 ;;
     esac
+
+    # `uname -m` in some cases mis-reports 32-bit OS as 64-bit, so double check
+    if [ "${arch}" = "x86_64" ] && [ "$(getconf LONG_BIT)" -eq 32 ]; then
+        arch="i686"
+    elif [ "${arch}" = "aarch64" ] && [ "$(getconf LONG_BIT)" -eq 32 ]; then
+        arch="arm"
+    fi
+
+    echo "$arch"
+}
+
+derive_platform() {
+    arch="$1"
+    plat=$(uname -s | tr '[:upper:]' '[:lower:]')
+    case "${plat}-${arch}" in
+        msys_nt*) plat="pc-windows-msvc" ;;
+        cygwin_nt*) plat="pc-windows-msvc";;
+        mingw*) plat="pc-windows-msvc" ;;
+        darwin-*) plat="apple-darwin" ;;
+        linux-arm) plat="unknown-linux-gnueabihf" ;;
+        linux-*) plat="unknown-linux-musl" ;;
+        freebsd-*) plat="unknown-freebsd" ;;
+    esac
+}
+
+derive_binary_name() {
+    arch=$(derive_arch)
+    plat=$(derive_plaform "$arch")
 
     echo "$NAME-$arch-$plat"
 }
@@ -70,13 +90,10 @@ unzip() {
 
     case "$ext" in
     *.tar.gz)
-        # TODO: Look at these flags?
-        flags=$(test -n "${VERBOSE-}" && echo "-xzvof" || echo "-xzof")
-        tar "$flags" "$path" -C "$to"
+        tar -xzof "$path" -C "$to"
         ;;
     *.zip)
-        flags=$(test -z "${VERBOSE-}" && echo "-qqo" || echo "-o")
-        "$flags" unzip "$path" -d "$to"
+        unzip -o "$path" -d "$to"
         ;;
     *)
         error "Unsupported compressed file type ${path}"
