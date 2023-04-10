@@ -50,9 +50,9 @@ jobs:
             linux-arm,
             macos-x86,
             macos-arm,
-            # win-msvc,
-            # win-gnu,
-            # win32-msvc,
+            win-msvc,
+            win-gnu,
+            win32-msvc,
           ]
         # List of OS versions https://github.com/actions/runner-images
         include:
@@ -72,17 +72,17 @@ jobs:
             os: macos-12
             target: aarch64-apple-darwin
 
-          # - build: win-msvc
-          #   os: windows-2022
-          #   target: x86_64-pc-windows-msvc
+          - build: win-msvc
+            os: windows-2022
+            target: x86_64-pc-windows-msvc
 
-          # - build: win-gnu
-          #   os: windows-2022
-          #   target: x86_64-pc-windows-gnu
+          - build: win-gnu
+            os: windows-2022
+            target: x86_64-pc-windows-gnu
 
-          # - build: win32-msvc
-          #   os: windows-2022
-          #   target: i686-pc-windows-msvc
+          - build: win32-msvc
+            os: windows-2022
+            target: i686-pc-windows-msvc
 
     steps:
       - name: Checkout sources
