@@ -51,7 +51,7 @@ jobs:
             macos-x86,
             macos-arm,
             win-msvc,
-            win-gnu,
+            # win-gnu,
             win32-msvc,
           ]
         # List of OS versions https://github.com/actions/runner-images
@@ -76,9 +76,9 @@ jobs:
             os: windows-2022
             target: x86_64-pc-windows-msvc
 
-          - build: win-gnu
-            os: windows-2022
-            target: x86_64-pc-windows-gnu
+          # - build: win-gnu
+          #   os: windows-2022
+          #   target: x86_64-pc-windows-gnu
 
           - build: win32-msvc
             os: windows-2022
