@@ -4,7 +4,6 @@
 set -euo pipefail
 
 NAME="git-kit"
-DEFAULT_CONFIG_PATH=${BIN:-"$HOME/.$NAME"}
 BIN=${BIN:-"/usr/local/bin"}
 
 # colors
@@ -63,7 +62,7 @@ derive_binary_name() {
 }
 
 unzip() {
-    printf "⏳ Unzipping binary..."
+    printf "⏳ Unzipping binary... "
 
     path="$1"
     to="$2"
@@ -107,7 +106,7 @@ download() {
     binary_name="$2"
     ext=$(derive_zip_ext)
 
-    printf "⏳ Downlaoding binary %s..." "$binary_name"
+    printf "⏳ Downlaoding binary %s... " "$binary_name"
 
     release="https://github.com/xsv24/$NAME/releases/latest/download/${binary_name}${ext}"
 
@@ -125,16 +124,17 @@ default_template_config() {
     uncompressed="$2"
     location="$uncompressed/$binary_name"
     
-    printf "⏳ Configuring..."
+    printf "⏳ Configuring... "
     cp "$location/$NAME" "$BIN"
 
     target_config=$(derive_target_config)
     mkdir -p "$target_config"
     
-    cp "$location/conventional.yml" "$DEFAULT_CONFIG_PATH"
-    cp "$location/default.yml" "$DEFAULT_CONFIG_PATH"
-    # cp "$location/conventional.yml" "$target_config" 
-    # cp "$location/default.yml" "$target_config"
+    cp "$location/conventional.yml" "$target_config" 
+    chmod 644 "$target_config/conventional.yml"
+
+    cp "$location/default.yml" "$target_config"
+    chmod 644 "$target_config/default.yml"
 
     echo " ✅"
 }
@@ -153,7 +153,6 @@ main() {
     rm -r "$uncompressed"
     
     echo "🚀 ${ORANGE}$NAME${NONE} is now installed!"
-    # echo "export PATH=$PATH:$BIN"
     echo ""
     echo "✨ Get started with ↓"
     echo "> $NAME --help"
