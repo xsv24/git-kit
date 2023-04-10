@@ -4,6 +4,7 @@
 set -euo pipefail
 
 NAME="git-kit"
+DEFAULT_CONFIG_PATH=${BIN:-"$HOME/.$NAME"}
 BIN=${BIN:-"/usr/local/bin"}
 
 # colors
@@ -28,6 +29,7 @@ is_installed() {
 derive_target_config() {
     plat=$(uname -s | tr '[:upper:]' '[:lower:]')
     case "${plat}" in
+        linux) echo "$HOME/.config/$NAME" ;;
         darwin) echo "$HOME/Library/Application Support/dev.xsv24.$NAME" ;;
         *) error "Currently unsupported OS platform '${plat}'" && exit 1 ;;
     esac
@@ -54,7 +56,7 @@ derive_binary_name() {
         amd64 | x86_64) arch="x86_64" ;;
         armv*) arch="arm" ;;
         arm64) arch="aarch64" ;;
-        *) error "Currently unsupported architecture '${arch}'" && exit 1 ;;
+        *) error "Currently unsupported architecture '${arch}' for '${plat}'" && exit 1 ;;
     esac
 
     echo "$NAME-$arch-$plat"
@@ -124,13 +126,15 @@ default_template_config() {
     location="$uncompressed/$binary_name"
     
     printf "⏳ Configuring..."
-    mv "$location/$NAME" "$BIN"
+    cp "$location/$NAME" "$BIN"
 
     target_config=$(derive_target_config)
     mkdir -p "$target_config"
-
-    mv "$location/conventional.yml" "$target_config" 
-    mv "$location/default.yml" "$target_config"
+    
+    cp "$location/conventional.yml" "$DEFAULT_CONFIG_PATH"
+    cp "$location/default.yml" "$DEFAULT_CONFIG_PATH"
+    # cp "$location/conventional.yml" "$target_config" 
+    # cp "$location/default.yml" "$target_config"
 
     echo " ✅"
 }
@@ -147,8 +151,9 @@ main() {
 
     default_template_config "$binary_name" "$uncompressed"
     rm -r "$uncompressed"
-
+    
     echo "🚀 ${ORANGE}$NAME${NONE} is now installed!"
+    # echo "export PATH=$PATH:$BIN"
     echo ""
     echo "✨ Get started with ↓"
     echo "> $NAME --help"
