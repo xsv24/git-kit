@@ -1,7 +1,7 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 
 # exit on any error
-set -euo pipefail
+set -euo
 
 NAME="git-kit"
 BIN=${BIN:-"/usr/local/bin"}
