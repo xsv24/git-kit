@@ -1,8 +1,10 @@
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 
 use anyhow::Context;
-use rusqlite::Connection;
+use rusqlite::{Connection, OptionalExtension};
 use rusqlite_migration::{Migrations, M};
+
+use crate::domain::models::ConfigKey;
 
 #[derive(Clone)]
 pub struct DefaultConfig {
@@ -46,18 +48,23 @@ pub fn db_migrations(
         M::up("ALTER TABLE branch ADD COLUMN scope TEXT;")
             .down("ALTER TABLE branch DROP COLUMN scope;"),
     ]);
+    
+    let current_version: usize = migrations
+        .current_version(connection)
+        .context("Failed to get current migration version.")?
+        .into();
 
     migrations
         .to_version(connection, context.version)
         .with_context(|| format!("Failed to apply migration version '{}'", context.version))?;
 
-    let version: usize = migrations
-        .current_version(connection)
-        .context("Failed to get current migration version.")?
-        .into();
+    if current_version == context.version {
+        log::info!("Using cached default templates due to no version change");
+        return Ok(migrations);
+    }
 
     if let Some(config_paths) = context.default_configs {
-        migrate_default_configuration(config_paths, connection, version)?;
+        migrate_default_configurations(config_paths, connection, context.version)?;
     }
 
     log::info!("Migrations complete for version '{}'.", context.version);
@@ -65,46 +72,45 @@ pub fn db_migrations(
     Ok(migrations)
 }
 
-fn migrate_default_configuration(
+
+fn migrate_default_configurations(
     default_configs: DefaultConfig,
     connection: &mut Connection,
     version: usize,
 ) -> anyhow::Result<()> {
-    if version >= 2 {
-        let config_default = default_configs
-            .default
-            .to_str()
-            .context("Expected valid default config path.")?;
-
-        connection.execute(
-            "INSERT OR IGNORE INTO config (key, path, status) VALUES (?1, ?2, ?3);",
-            ["default", config_default, "ACTIVE"],
-        )?;
+    if version < 2 {
+        // 'config' table does not exist yet.
+        return Ok(());
     }
 
-    if version >= 3 {
-        // Update to latest changed path for the default configuration. '.git-kit.yml' -> 'templates/default.yml'
-        let default_path = default_configs
-            .default
-            .to_str()
-            .context("Expected valid default config path.")?;
-        connection.execute(
-            "UPDATE config SET path = ?1 WHERE key='default'",
-            [default_path],
-        )?;
+    let active_key = connection.query_row(
+        "SELECT key FROM config WHERE status == 'ACTIVE'",
+        [],
+        |row| Ok(ConfigKey::from(row.get::<_, String>(0)?.as_str()))
+    ).optional()?;
 
-        // Insert the new 'conventional' default configuration.
-        // Note there is a possibility for conflicts with user custom configs and the name 'conventional' which be replaced.
-        // User custom configs using the name 'conventional' will have to re-added under a new name via the 'config add' command.
-        let conventional_path = default_configs
-            .conventional
-            .to_str()
-            .context("Expected valid conventional config path.")?;
-        connection.execute(
-            "REPLACE INTO config (key, path, status) VALUES ('conventional', ?1, 'DISABLED');",
-            [conventional_path],
-        )?;
-    }
+    let active_key = active_key.unwrap_or(ConfigKey::Default);
+    migrate_default_configuration(connection, &active_key, ConfigKey::Default, default_configs.default)?;
+    migrate_default_configuration(connection, &active_key, ConfigKey::Conventional, default_configs.conventional)?;
+
+    Ok(())
+}
+
+fn migrate_default_configuration(
+    connection: &mut Connection,
+    active_key: &ConfigKey,
+    key: ConfigKey,
+    path: PathBuf
+) -> anyhow::Result<()> {
+    let path = path.to_str()
+        .context("Expected valid default config path.")?;
+
+    let status = if &key == active_key { "ACTIVE" } else { "DISABLED" };
+
+    connection.execute(
+        "REPLACE INTO config (key, path, status) VALUES (?1, ?2, ?3)",
+        [&String::from(key), path, status],
+    )?;
 
     Ok(())
 }
@@ -112,9 +118,9 @@ fn migrate_default_configuration(
 #[cfg(test)]
 mod tests {
     use rusqlite::Connection;
-    use std::path::{Path, PathBuf};
+    use std::{path::{Path}};
 
-    use crate::migrations::{db_migrations, DefaultConfig, MigrationContext};
+    use crate::{migrations::{db_migrations, DefaultConfig, MigrationContext}, cli::config};
 
     fn arrange(context: MigrationContext) -> (Connection, Vec<String>, MigrationContext) {
         let mut connection = Connection::open_in_memory().unwrap();
@@ -126,6 +132,53 @@ mod tests {
         let tables = get_table_names(&mut connection);
 
         (connection, tables, context)
+    }
+
+    #[test]
+    fn templates_respect_currently_active_config() {
+        // Arrange
+        let context = MigrationContext {
+            default_configs: Some(DefaultConfig {
+                default: Path::new("default.yml").to_owned(),
+                conventional: Path::new("conventional.yml").to_owned(),
+            }),
+            version: 2,
+        };
+
+        // Migrate to version 1 with default set to active
+        let (connection, ..) = arrange(context.clone());
+
+        // Assert test setup correctly
+        let active_key: String = connection.query_row(
+            "SELECT key FROM config WHERE status == 'ACTIVE'",
+            [],
+            |row| row.get(0)
+        ).unwrap();
+        assert_eq!(active_key, "default");
+
+        // Update the 'active' configuration 
+        connection.execute(
+            "UPDATE config SET status = 'DISABLED'",
+            []
+        ).unwrap();
+
+        connection.execute(
+            "REPLACE INTO config (key, path, status) VALUES (?1, ?2, ?3)",
+            ["conventional", Path::new("conventional.yml").to_str().unwrap(), "ACTIVE"],
+        ).unwrap();
+
+        // Act
+        let mut connection = connection;
+        db_migrations(&mut connection, MigrationContext { version: 3, ..context }).unwrap();
+
+        // Assert
+        let default_configs = get_default_configs(&connection);
+        let default_config = default_configs.get(1).unwrap();
+        let conventional_config = default_configs.get(0).unwrap();
+
+        assert_eq!(conventional_config.2, "ACTIVE");
+        assert_eq!(default_config.2, "DISABLED");
+
     }
 
     #[test]
@@ -144,7 +197,7 @@ mod tests {
         let context = MigrationContext {
             default_configs: Some(DefaultConfig {
                 default: Path::new("default.yml").to_owned(),
-                conventional: PathBuf::new(),
+                conventional: Path::new("conventional.yml").to_owned(),
             }),
             version: 2,
         };
@@ -156,12 +209,17 @@ mod tests {
 
         let default_configs = get_default_configs(&connection);
 
-        assert_eq!(default_configs.len(), 1);
-        let (name, path, status) = default_configs.get(0).unwrap();
+        assert_eq!(default_configs.len(), 2);
+        let default_config = default_configs.get(1).unwrap();
+        let conventional_config = default_configs.get(0).unwrap();
 
-        assert_eq!(name, "default");
-        assert_eq!(path, "default.yml");
-        assert_eq!(status, "ACTIVE");
+        assert_eq!(default_config.0, "default");
+        assert_eq!(default_config.1, "default.yml");
+        assert_eq!(default_config.2, "ACTIVE");
+
+        assert_eq!(conventional_config.0, "conventional");
+        assert_eq!(conventional_config.1, "conventional.yml");
+        assert_eq!(conventional_config.2, "DISABLED");
     }
 
     #[test]
