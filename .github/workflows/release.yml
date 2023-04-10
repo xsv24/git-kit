@@ -72,7 +72,7 @@ jobs:
 
           - build: linux-arm
             os: ubuntu-22.04
-            target: arm-unknown-linux-musleabihf
+            target: arm-unknown-linux-gnueabihf
           
           - build:
             os: ubuntu-22.04
