@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 # exit on any error
-set -euo
+set -eu
 
 NAME="git-kit"
 BIN=${BIN:-"/usr/local/bin"}
@@ -76,7 +76,7 @@ derive_platform() {
 
 derive_binary_name() {
     arch=$(derive_arch)
-    plat=$(derive_plaform "$arch")
+    plat=$(derive_platform "$arch")
 
     echo "$NAME-$arch-$plat"
 }

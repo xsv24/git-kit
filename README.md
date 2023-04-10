@@ -106,6 +106,7 @@ git-kit config set conventional
   <summary>🐧 Linux</summary>
   
   > Package managers coming soon 🤞
+
   Install the latest version:
 
   ```bash
@@ -116,7 +117,7 @@ git-kit config set conventional
 <details>
   <summary>🪟 Windows</summary>
 
-  > Coming soon 🤞
+  Coming soon 🤞
 </details>
 
 ---
