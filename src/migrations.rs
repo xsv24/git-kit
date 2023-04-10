@@ -1,4 +1,4 @@
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 
 use anyhow::Context;
 use rusqlite::{Connection, OptionalExtension};
@@ -48,7 +48,7 @@ pub fn db_migrations(
         M::up("ALTER TABLE branch ADD COLUMN scope TEXT;")
             .down("ALTER TABLE branch DROP COLUMN scope;"),
     ]);
-    
+
     let current_version: usize = migrations
         .current_version(connection)
         .context("Failed to get current migration version.")?
@@ -72,7 +72,6 @@ pub fn db_migrations(
     Ok(migrations)
 }
 
-
 fn migrate_default_configurations(
     default_configs: DefaultConfig,
     connection: &mut Connection,
@@ -83,15 +82,27 @@ fn migrate_default_configurations(
         return Ok(());
     }
 
-    let active_key = connection.query_row(
-        "SELECT key FROM config WHERE status == 'ACTIVE'",
-        [],
-        |row| Ok(ConfigKey::from(row.get::<_, String>(0)?.as_str()))
-    ).optional()?;
+    let active_key = connection
+        .query_row(
+            "SELECT key FROM config WHERE status == 'ACTIVE'",
+            [],
+            |row| Ok(ConfigKey::from(row.get::<_, String>(0)?.as_str())),
+        )
+        .optional()?;
 
     let active_key = active_key.unwrap_or(ConfigKey::Default);
-    migrate_default_configuration(connection, &active_key, ConfigKey::Default, default_configs.default)?;
-    migrate_default_configuration(connection, &active_key, ConfigKey::Conventional, default_configs.conventional)?;
+    migrate_default_configuration(
+        connection,
+        &active_key,
+        ConfigKey::Default,
+        default_configs.default,
+    )?;
+    migrate_default_configuration(
+        connection,
+        &active_key,
+        ConfigKey::Conventional,
+        default_configs.conventional,
+    )?;
 
     Ok(())
 }
@@ -100,12 +111,17 @@ fn migrate_default_configuration(
     connection: &mut Connection,
     active_key: &ConfigKey,
     key: ConfigKey,
-    path: PathBuf
+    path: PathBuf,
 ) -> anyhow::Result<()> {
-    let path = path.to_str()
+    let path = path
+        .to_str()
         .context("Expected valid default config path.")?;
 
-    let status = if &key == active_key { "ACTIVE" } else { "DISABLED" };
+    let status = if &key == active_key {
+        "ACTIVE"
+    } else {
+        "DISABLED"
+    };
 
     connection.execute(
         "REPLACE INTO config (key, path, status) VALUES (?1, ?2, ?3)",
@@ -118,9 +134,12 @@ fn migrate_default_configuration(
 #[cfg(test)]
 mod tests {
     use rusqlite::Connection;
-    use std::{path::{Path}};
+    use std::path::Path;
 
-    use crate::{migrations::{db_migrations, DefaultConfig, MigrationContext}, cli::config};
+    use crate::{
+        cli::config,
+        migrations::{db_migrations, DefaultConfig, MigrationContext},
+    };
 
     fn arrange(context: MigrationContext) -> (Connection, Vec<String>, MigrationContext) {
         let mut connection = Connection::open_in_memory().unwrap();
@@ -149,27 +168,41 @@ mod tests {
         let (connection, ..) = arrange(context.clone());
 
         // Assert test setup correctly
-        let active_key: String = connection.query_row(
-            "SELECT key FROM config WHERE status == 'ACTIVE'",
-            [],
-            |row| row.get(0)
-        ).unwrap();
+        let active_key: String = connection
+            .query_row(
+                "SELECT key FROM config WHERE status == 'ACTIVE'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
         assert_eq!(active_key, "default");
 
-        // Update the 'active' configuration 
-        connection.execute(
-            "UPDATE config SET status = 'DISABLED'",
-            []
-        ).unwrap();
+        // Update the 'active' configuration
+        connection
+            .execute("UPDATE config SET status = 'DISABLED'", [])
+            .unwrap();
 
-        connection.execute(
-            "REPLACE INTO config (key, path, status) VALUES (?1, ?2, ?3)",
-            ["conventional", Path::new("conventional.yml").to_str().unwrap(), "ACTIVE"],
-        ).unwrap();
+        connection
+            .execute(
+                "REPLACE INTO config (key, path, status) VALUES (?1, ?2, ?3)",
+                [
+                    "conventional",
+                    Path::new("conventional.yml").to_str().unwrap(),
+                    "ACTIVE",
+                ],
+            )
+            .unwrap();
 
         // Act
         let mut connection = connection;
-        db_migrations(&mut connection, MigrationContext { version: 3, ..context }).unwrap();
+        db_migrations(
+            &mut connection,
+            MigrationContext {
+                version: 3,
+                ..context
+            },
+        )
+        .unwrap();
 
         // Assert
         let default_configs = get_default_configs(&connection);
@@ -178,7 +211,6 @@ mod tests {
 
         assert_eq!(conventional_config.2, "ACTIVE");
         assert_eq!(default_config.2, "DISABLED");
-
     }
 
     #[test]
