@@ -68,6 +68,7 @@ jobs:
       - name: Cross Tests 
         uses: actions-rs/cargo@v1
         env:
+          RUST_BACKTRACE: 1
           BUILD_DISABLED: "true" # Disable the "build.rs" file from running
         with:
           use-cross: true
