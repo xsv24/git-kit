@@ -42,6 +42,7 @@ pub struct Cli {
 }
 
 impl Cli {
+    // TODO: refactor to return Errors
     pub fn init(&self) -> anyhow::Result<AppContext<Git<GitCommand>, Sqlite>> {
         self.log.init_logger();
 

@@ -1,6 +1,3 @@
-[![rust](https://img.shields.io/badge/rust-161923?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
-[![git-logo](https://img.shields.io/badge/git-F05032?style=for-the-badge&logo=git&logoColor=white)](https://git-scm.com/)
-
 [![crates.io](https://img.shields.io/crates/v/git-kit?label=%F0%9F%93%A6%20git-kit&style=flat-square)](https://crates.io/crates/git-kit)
 [![Main branch tests](https://img.shields.io/github/actions/workflow/status/xsv24/git-kit/commit.yml?branch=main&label=%F0%9F%A7%AA%20tests&style=flat-square)](https://img.shields.io/github/actions/workflow/status/xsv24/git-kit/actions)
 [![license](https://img.shields.io/github/license/xsv24/git-kit?color=blue&style=flat-square&logo=)](./LICENSE)
@@ -75,9 +72,9 @@ git-kit config set conventional
 
 ## ⏳ Install Binary
 <details>
-  <summary>🦀 Rust's Cargo</summary>
+  <summary>🦀 Cargo</summary>
  
-  Install the latest version via [Rust](https://www.rust-lang.org/tools/install). 
+  Install the latest version via [Cargo](https://www.rust-lang.org/tools/install). 
 
   ```bash
   cargo install git-kit
