@@ -41,13 +41,17 @@ jobs:
             os: ubuntu-22.04
             target: arm-unknown-linux-gnueabihf
 
-          # - build:
-          #   os: ubuntu-22.04
-          #   target: x86_64-unknown-freebsd
+          - build:
+            os: ubuntu-22.04
+            target: x86_64-unknown-freebsd
 
           - build: macos-x86
             os: macos-12
             target: x86_64-apple-darwin
+
+          - build: macos-arm
+            os: macos-12
+            target: aarch64-apple-darwin
 
           - build: win-msvc
             os: windows-2022
@@ -59,7 +63,7 @@ jobs:
 
           # - build: win-gnu
           #   os: windows-2022
-          #   target: x86_64-pc-windows-gnu
+          #  target: x86_64-pc-windows-gnu
 
     steps:
       - name: Checkout
@@ -72,7 +76,7 @@ jobs:
           target: ${{ matrix.target }}
           override: true
 
-      - name: Cross Test
+      - name: Cross Tests
         uses: actions-rs/cargo@v1
         env:
           BUILD_DISABLED: "true" # Disable the "build.rs" file from running
