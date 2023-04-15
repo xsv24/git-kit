@@ -1,6 +1,10 @@
-on: [push]
+name: 🧪 Commit
 
-name: Commit CI
+on:
+  pull_request:
+  push:
+    branches:
+      - master
 
 jobs:
   check:
@@ -63,4 +67,8 @@ jobs:
         with:
           command: test
           args: -- --show-output
-    needs: [check, fmt, clippy]
+
+  cargo-publish-dry:
+    uses: xsv24/git-kit/.github/workflows/cargo-publish.yml@binary-release
+    with:
+      dry-run: true
