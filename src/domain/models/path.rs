@@ -167,7 +167,7 @@ mod test {
                 path: dir_path,
                 path_type: PathType::Directory
             }
-        )
+        );
     }
 
     #[test]
@@ -181,7 +181,7 @@ mod test {
                 path: file_path,
                 path_type: PathType::File
             }
-        )
+        );
     }
 
     #[test]
@@ -197,7 +197,7 @@ mod test {
                 path: dir_path_buf,
                 path_type: PathType::Directory
             }
-        )
+        );
     }
 
     #[test]
@@ -213,7 +213,7 @@ mod test {
                 expected: PathType::Directory,
                 actual: PathType::File
             }
-        )
+        );
     }
 
     #[test]
@@ -229,7 +229,7 @@ mod test {
                 path: file_path_buf,
                 path_type: PathType::File
             }
-        )
+        );
     }
 
     #[test]
@@ -245,7 +245,7 @@ mod test {
                 expected: PathType::File,
                 actual: PathType::Directory
             }
-        )
+        );
     }
 
     fn valid_dir_path() -> PathBuf {

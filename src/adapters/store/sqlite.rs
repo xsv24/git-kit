@@ -665,7 +665,7 @@ mod tests {
 
     fn valid_path() -> AbsolutePath {
         let path = Path::new(".").to_owned();
-        std::fs::canonicalize(path)
+        dunce::canonicalize(path)
             .expect("Valid conversion to absolute path")
             .try_into()
             .unwrap()
