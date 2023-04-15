@@ -75,6 +75,10 @@ pub struct GitCommandMock {
     pub template_file_path: fn() -> Result<AbsolutePath, GitError>,
 }
 
+lazy_static::lazy_static! {
+    static ref VALID_FILE_PATH: AbsolutePath = valid_template_file_path();
+}
+
 impl GitCommandMock {
     pub fn fake() -> GitCommandMock {
         GitCommandMock {
@@ -82,7 +86,7 @@ impl GitCommandMock {
             branch_name: Ok(Faker.fake()),
             checkout_res: |_, _| Ok(()),
             commit_res: |_, _| Ok(()),
-            template_file_path: || Ok(valid_template_file_path()),
+            template_file_path: || Ok(VALID_FILE_PATH.clone()),
         }
     }
 }
