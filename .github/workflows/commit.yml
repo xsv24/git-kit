@@ -68,7 +68,7 @@ jobs:
           command: test
           args: -- --show-output
 
-  cargo-publish-dry:
+  cargo-check:
     uses: xsv24/git-kit/.github/workflows/cargo-publish.yml@binary-relase
     with:
       dry-run: true

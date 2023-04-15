@@ -97,10 +97,10 @@ jobs:
           #   target: x86_64-pc-windows-gnu
 
     steps:
-      - name: Checkout sources
+      - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Install ${{ matrix.rust }} toolchain
+      - name: Install ${{ matrix.target }} toolchain
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
