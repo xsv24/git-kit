@@ -41,9 +41,9 @@ jobs:
             os: ubuntu-22.04
             target: arm-unknown-linux-gnueabihf
 
-          - build:
-            os: ubuntu-22.04
-            target: x86_64-unknown-freebsd
+          # - build:
+          #   os: ubuntu-22.04
+          #   target: x86_64-unknown-freebsd
 
           - build: macos-x86
             os: macos-12
