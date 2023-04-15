@@ -136,10 +136,7 @@ mod tests {
     use rusqlite::Connection;
     use std::path::Path;
 
-    use crate::{
-        cli::config,
-        migrations::{db_migrations, DefaultConfig, MigrationContext},
-    };
+    use crate::migrations::{db_migrations, DefaultConfig, MigrationContext};
 
     fn arrange(context: MigrationContext) -> (Connection, Vec<String>, MigrationContext) {
         let mut connection = Connection::open_in_memory().unwrap();

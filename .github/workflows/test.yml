@@ -76,7 +76,7 @@ jobs:
           target: ${{ matrix.target }}
           override: true
 
-      - name: Build release binary
+      - name: Cross Test
         uses: actions-rs/cargo@v1
         env:
           BUILD_DISABLED: "true" # Disable the "build.rs" file from running
