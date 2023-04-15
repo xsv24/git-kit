@@ -38,7 +38,7 @@ jobs:
           args: --dry-run
 
   publish:
-    if: !inputs.dry-run
+    if: inputs.dry-run != true
     runs-on: ubuntu-latest
     needs: [build, publish-dry]
     env:
