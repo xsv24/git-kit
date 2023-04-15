@@ -12,40 +12,48 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        build: [
-            linux-x86,
-            linux-i686,
-            linux-aarch64,
-            linux-arm,
-            macos-x86,
-            macos-arm,
-            win-msvc,
-            win32-msvc,
-            # win-gnu,
-          ]
         # List of OS versions https://github.com/actions/runner-images
         include:
           - build: linux-x86
             os: ubuntu-22.04
             target: x86_64-unknown-linux-musl
+
           - build: linux-i686
             os: ubuntu-22.04
             target: i686-unknown-linux-musl
+
           - build: linux-aarch64
             os: ubuntu-22.04
             target: aarch64-unknown-linux-musl
+
           - build: linux-arm
             os: ubuntu-22.04
             target: arm-unknown-linux-gnueabihf
+
+          - build:
+            os: ubuntu-22.04
+            target: x86_64-unknown-freebsd
+
           - build: macos-x86
             os: macos-12
             target: x86_64-apple-darwin
+
+          - build: macos-arm
+            os: macos-12
+            target: aarch64-apple-darwin
+
           - build: win-msvc
             os: windows-2022
             target: x86_64-pc-windows-msvc
+
           - build: win32-msvc
             os: windows-2022
             target: i686-pc-windows-msvc
+
+          # - build: win-gnu
+          #   os: windows-2022
+          #   target: x86_64-pc-windows-gnu
+
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -57,7 +65,7 @@ jobs:
           target: ${{ matrix.target }}
           override: true
 
-      - name: Cross Tests
+      - name: Cross Tests 
         uses: actions-rs/cargo@v1
         env:
           BUILD_DISABLED: "true" # Disable the "build.rs" file from running
