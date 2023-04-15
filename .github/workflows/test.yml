@@ -42,9 +42,9 @@ jobs:
             os: windows-2022
             target: i686-pc-windows-msvc
 
-          # - build: win-gnu
-          #   os: windows-2022
-          #   target: x86_64-pc-windows-gnu
+          - build: win-gnu
+            os: windows-2022
+            target: x86_64-pc-windows-gnu
 
     steps:
       - name: Checkout
