@@ -12,6 +12,10 @@ on:
         type: boolean
         default: true
 
+    secrets:
+      token:
+        required: false
+
 jobs:
   dry-run:
     if: inputs.dry-run
@@ -42,7 +46,7 @@ jobs:
     if: inputs.dry-run != true
     runs-on: ubuntu-latest
     env:
-      CARGO_TOKEN: ${{ secrets.CARGO_TOKEN }}
+      VERSION: ${{ inputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -63,8 +67,8 @@ jobs:
 
       - name: Update Cargo.toml version
         run: |
-          cargo release version ${{ inputs.version }} --no-confirm --execute
-
+          echo "release $VERSION"
+          cargo release version --no-confirm --execute "$VERSION"
       # Publish and allow dirty since the Cargo.toml version is changed.
       - name: Publish package
-        run: cargo publish --token "$CARGO_TOKEN" --allow-dirty
+        run: cargo publish --token ${{ secrets.token }} --allow-dirty
