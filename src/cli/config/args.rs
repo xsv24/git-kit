@@ -13,6 +13,7 @@ use crate::{
 };
 
 #[allow(clippy::almost_swapped)]
+#[allow(clippy::correctness)]
 #[derive(Debug, Clone, Subcommand)]
 pub enum Arguments {
     /// Add / register a custom config file.
