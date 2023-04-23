@@ -12,6 +12,7 @@ use crate::{
     entry::Interactive,
 };
 
+#[allow(clippy::almost_swapped)]
 #[derive(Debug, Clone, Subcommand)]
 pub enum Arguments {
     /// Add / register a custom config file.
