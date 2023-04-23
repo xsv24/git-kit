@@ -4,6 +4,12 @@
 
 # 🧰 git-kit
 
+> 🚨 **IMPORTANT**
+>
+> This repository has been **renamed** to [inkan](https://github.com/xsv24/inkan) and thus this repository is now deprecated.
+>
+> Please head over to the [inkan](https://github.com/xsv24/inkan) repository to continue 🙏
+
 Use this CLI to help format your git commit messages consistently with less effort via pre-provided templates! 🤩
 
 There are two default templates provided:
