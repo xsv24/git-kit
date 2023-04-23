@@ -1,4 +1,4 @@
-use clap::Args;
+use clap::{Args, Subcommand};
 
 use crate::{
     domain::{
@@ -12,7 +12,7 @@ use crate::{
     entry::Interactive,
 };
 
-#[derive(Debug, Clone, clap::Subcommand)]
+#[derive(Debug, Clone, Subcommand)]
 pub enum Arguments {
     /// Add / register a custom config file.
     Add(ConfigAdd),
