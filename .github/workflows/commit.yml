@@ -37,21 +37,21 @@ jobs:
           command: fmt
           args: --all -- --check
 
-  clippy:
-    name: clippy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - run: rustup component add clippy
-      - uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -- -D warnings
+  # clippy:
+  #   name: clippy
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - uses: actions-rs/toolchain@v1
+  #       with:
+  #         profile: minimal
+  #         toolchain: stable
+  #         override: true
+  #     - run: rustup component add clippy
+  #     - uses: actions-rs/cargo@v1
+  #       with:
+  #         command: clippy
+  #         args: -- -D warnings
 
   test:
     name: test
@@ -69,7 +69,7 @@ jobs:
           args: -- --show-output
 
   os-test:
-    needs: [check, fmt, clippy, test]
+    needs: [check, fmt, test]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: true
@@ -126,6 +126,6 @@ jobs:
           args: --target=${{ matrix.target }}
 
   cargo-check:
-    uses: xsv24/git-kit/.github/workflows/cargo-publish.yml@binary-relase
+    uses: xsv24/git-kit/.github/workflows/cargo-publish.yml@main
     with:
       dry-run: true

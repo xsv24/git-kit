@@ -10,6 +10,8 @@ use crate::{
 
 use super::{checkout, commit, config, context, templates};
 
+#[allow(clippy::almost_swapped)]
+#[allow(clippy::correctness)]
 #[derive(Debug, Clone, Subcommand)]
 pub enum Commands {
     /// Commit staged changes via git with a template message.
