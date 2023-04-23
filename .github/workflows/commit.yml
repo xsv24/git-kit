@@ -69,7 +69,7 @@ jobs:
           args: -- --show-output
 
   os-test:
-    needs: [check, fmt, clippy, test]
+    needs: [check, fmt, test]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: true
